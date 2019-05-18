@@ -12,11 +12,16 @@ jQuery(document).ready(function(){
     var polygon_category = jQuery("#location_category").val();
     var epsilon_value = jQuery("#epsilon_factor").val();
     var specific_location = jQuery("#specific_location_id").val();
+    var specific_location_hierarchy_id = jQuery("#specific_location_hierarchy_id").val();
+
+    console.log(epsilon_value + ",   " +  specific_location_hierarchy_id);
 
     if(polygon_category && epsilon_value && specific_location){
-      request_and_display_gemeinden(polygon_category, epsilon_value, specific_location);
+      request_and_display_gemeinden(polygon_category, epsilon_value, specific_location, "");
     }else if(polygon_category && epsilon_value){
-      request_and_display_gemeinden(polygon_category, epsilon_value,"");
+      request_and_display_gemeinden(polygon_category, epsilon_value,"", "");
+    }else if (specific_location_hierarchy_id && epsilon_value){
+      request_and_display_gemeinden("", epsilon_value,"", specific_location_hierarchy_id);
     }else{
       jQuery("#location_category").val("");
       jQuery("#epsilon_factor").val("");
@@ -31,9 +36,10 @@ jQuery(document).ready(function(){
     var polygon_category = jQuery("#location_category").val();
     var epsilon_value = jQuery("#epsilon_factor").val();
     var specific_location = jQuery("#specific_location_id").val();
+    var specific_location_hierarchy = jQuery("#specific_location_hierarchy_id").val();
 
-    if(polygon_category && epsilon_value ){
-      request_gemeinden_jq(polygon_category,epsilon_value,specific_location);
+    if((polygon_category || specific_location || specific_location_hierarchy) && epsilon_value ){
+      request_gemeinden_jq(polygon_category,epsilon_value,specific_location,specific_location_hierarchy);
    }else{
       jQuery("#location_category").val("");
       jQuery("#epsilon_factor").val("");
@@ -47,13 +53,14 @@ jQuery(document).ready(function(){
 /*
 Get polygons ids by gategory, simplify and save to database
 */
-function request_gemeinden_jq(polygon_category, epsilon_val, specific_location){
+function request_gemeinden_jq(polygon_category, epsilon_val, specific_location, specific_location_hierarchy){
   jQuery.ajax({
          url: ajaxurl, 
          data:{
           action: "send_location_info",
           polygon_category : polygon_category,
-          specific_location : specific_location
+          specific_location : specific_location,
+          specific_location_hierarchy: specific_location_hierarchy
          },
          success: function(result){
          locations_info = JSON.parse(result);
@@ -224,7 +231,7 @@ function jsts_simplify(polygon, epsilon){
 /*
 Display Polygons from category
 */
-function request_and_display_gemeinden(polygon_category, epsilon_value,specific_location){
+function request_and_display_gemeinden(polygon_category, epsilon_value,specific_location,specific_location_hierarchy_id){
   //console.log("request data");
 
    jQuery.ajax({
@@ -234,7 +241,8 @@ function request_and_display_gemeinden(polygon_category, epsilon_value,specific_
          action : 'get_simpl_polygon_data',
          polygon_category: polygon_category,
          epsilon : epsilon_value,
-         specific_location : specific_location
+         specific_location : specific_location,
+         specific_location_hierarchy_id : specific_location_hierarchy_id
       },
     
       success: function(result){

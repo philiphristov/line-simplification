@@ -13,7 +13,7 @@ function load_custom_wp_admin_style($hook) {
 	if($hook != 'toplevel_page_line-simplification') {
                 return;
     }
-    wp_register_style( 'custom_wp_admin_css', plugins_url('line-simplification-plugin') . '/admin-style-pol-simpl.css', false, '1.0.0' );
+    wp_register_style( 'custom_wp_admin_css', plugins_url('line-simplification') . '/admin-style-pol-simpl.css', false, '1.0.0' );
     wp_enqueue_style( 'custom_wp_admin_css' );
 }
 
@@ -26,11 +26,11 @@ function pol_simpl_scripts($hook) {
 
     wp_localize_script( 'ajax_calls_handler', 'ajax_object',array( 'ajax_url' => admin_url( 'admin-ajax.php' )));
 
-    wp_enqueue_script( 'jsts', plugins_url('line-simplification-plugin') . '/js/jsts.min.js' );
-    wp_enqueue_script( 'map', plugins_url('line-simplification-plugin') . '/js/map.js' );
-    wp_enqueue_script( 'geo', plugins_url('line-simplification-plugin') . '/js/geo.js' );
-    wp_enqueue_script( 'line_simpl', plugins_url('line-simplification-plugin') . '/js/line_simplification.js' );
-    wp_enqueue_script( 'req_data', plugins_url('line-simplification-plugin') . '/js/request_data.js' );
+    wp_enqueue_script( 'jsts', plugins_url('line-simplification') . '/js/jsts.min.js' );
+    wp_enqueue_script( 'map', plugins_url('line-simplification') . '/js/map.js' );
+    wp_enqueue_script( 'geo', plugins_url('line-simplification') . '/js/geo.js' );
+    wp_enqueue_script( 'line_simpl', plugins_url('line-simplification') . '/js/line_simplification.js' );
+    wp_enqueue_script( 'req_data', plugins_url('line-simplification') . '/js/request_data.js' );
 
 
     ?>
