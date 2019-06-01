@@ -37,20 +37,28 @@ function get_simpl_polygon_data(){
 	$specific_location = $_POST['specific_location'];
 	$specific_location_hierarchy_id = $_POST['specific_location_hierarchy_id'];
 
-	if(strcmp($specific_location, "") == 0){
-		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
-		FROM polygone_vereinfacht, orte
-		WHERE polygone_vereinfacht.Id_Ort = orte.Id_Ort AND  orte.Id_Kategorie = $polygon_category AND polygone_vereinfacht.Epsilon = $epsilon
-		");
-	}else if(strcmp($specific_location_hierarchy_id, "") == 0){
+	error_log('Epsilon: ' . $epsilon);
+	error_log('Hierarchie: ' . $specific_location_hierarchy_id);
+	error_log('Cat: ' . $polygon_category);
+	error_log('Specific: ' . $specific_location);
+	
+
+	if(strcmp($specific_location_hierarchy_id, "") != 0){
+		error_log('Hierarchie');
 		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
 		FROM polygone_vereinfacht, orte, orte_hierarchien
 		WHERE polygone_vereinfacht.Id_Ort = orte.Id_Ort AND orte_hierarchien.Id_Ueberort = $specific_location_hierarchy_id  AND orte.Id_Ort = orte_hierarchien.Id_Ort AND polygone_vereinfacht.Epsilon = $epsilon");
-		
-	}else{
+	}else if(strcmp($polygon_category, "") != 0){
+		error_log('Category');
 		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
 		FROM polygone_vereinfacht, orte
-		WHERE polygone_vereinfacht.Id_Ort = orte.Id_Ort AND  orte.Id_Kategorie = $polygon_category AND polygone_vereinfacht.Epsilon = $epsilon AND orte.Id_Ort = $specific_location
+		WHERE polygone_vereinfacht.Id_Ort = orte.Id_Ort AND orte.Id_Kategorie = $polygon_category AND polygone_vereinfacht.Epsilon = $epsilon
+		");
+	}else if(strcmp($specific_location, "") != 0){
+		error_log('specific');
+		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
+		FROM polygone_vereinfacht, orte
+		WHERE polygone_vereinfacht.Id_Ort = orte.Id_Ort AND polygone_vereinfacht.Epsilon = $epsilon AND orte.Id_Ort = $specific_location
 		");
 	}
 
@@ -85,7 +93,7 @@ function send_location_info(){
 
 	if(strcmp($loc_id, "") != 0){
 		$loc_id = $_REQUEST["specific_location"];
-		$location_data = $db_obj->get_results("SELECT Id_Ort FROM orte WHERE Id_Ort = $loc_id");
+		$location_data = $db_obj->get_results("SELECT Id_Ort AS coordinates  FROM orte WHERE Id_Ort = $loc_id");
 	}else if(strcmp($specific_location_hierarchy, "") != 0){
 		$location_data = $db_obj->get_results("SELECT o.Id_Ort FROM orte o join orte_hierarchien o_h on o.Id_Ort = o_h.Id_Ort WHERE Id_Ueberort = $specific_location_hierarchy");
 	}else{
@@ -103,8 +111,37 @@ function send_location_info(){
 }
 
 
+add_action('wp_ajax_nopriv_get_hierarchy_polygons', 'get_hierarchy_polygons');
+add_action('wp_ajax_get_hierarchy_polygons', 'get_hierarchy_polygons');
+function get_hierarchy_polygons(){
+	global $db_obj;
 
+	$polygon_category = $_REQUEST["polygon_category"];
+	$loc_id = $_REQUEST["specific_location"];
+	$specific_location_hierarchy = $_REQUEST["specific_location_hierarchy"];
 
+	if(strcmp($loc_id, "") != 0){
+		$loc_id = $_REQUEST["specific_location"];
+		$location_data = $db_obj->get_results("SELECT Id_Ort, ST_AsText(orte.Geodaten)  as coordinates FROM orte WHERE Id_Ort = $loc_id");
+	}else if(strcmp($specific_location_hierarchy, "") != 0){
+		$location_data = $db_obj->get_results("SELECT o.Id_Ort, ST_AsText(o.Geodaten) as coordinates FROM orte o join orte_hierarchien o_h on o.Id_Ort = o_h.Id_Ort WHERE Id_Ueberort = $specific_location_hierarchy");
+	}else{
+		$location_data = $db_obj->get_results("SELECT Id_Ort, ST_AsText(orte.Geodaten) as coordinates FROM orte WHERE Id_Kategorie = $polygon_category");
+	}
+	
+	$json_data = [];
+
+	foreach ($location_data as $value) {
+		$obj_data = array(
+			"id" => $value->Id_Ort,
+			"coordinates" => $value->coordinates
+		);
+		array_push($json_data, $obj_data);
+	}
+
+	echo json_encode($json_data);
+	wp_die();
+}
 
 
 add_action('wp_ajax_nopriv_send_json', 'send_json');

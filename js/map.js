@@ -57,9 +57,8 @@ function add_geometry(geoData,color){
 
     }catch(e){
         
-    console.log("Error");
-    // console.log(geoData);
-    console.log(e);
+    // console.log("Error");
+    // console.log(e);
 
     var paths = new Array();
 

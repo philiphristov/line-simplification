@@ -9,18 +9,21 @@ var check_index;
 jQuery(document).ready(function(){
 
   jQuery("#display_simplified_polygons").on("click", function(){
-    var polygon_category = jQuery("#location_category").val();
-    var epsilon_value = jQuery("#epsilon_factor").val();
-    var specific_location = jQuery("#specific_location_id").val();
+    var polygon_category               = jQuery("#location_category").val();
+    var epsilon_value                  = jQuery("#epsilon_factor").val();
+    var specific_location              = jQuery("#specific_location_id").val();
     var specific_location_hierarchy_id = jQuery("#specific_location_hierarchy_id").val();
 
     console.log(epsilon_value + ",   " +  specific_location_hierarchy_id);
 
     if(polygon_category && epsilon_value && specific_location){
-      request_and_display_gemeinden(polygon_category, epsilon_value, specific_location, "");
+      //Display single specific locatation
+      request_and_display_gemeinden("", epsilon_value, specific_location, "");
     }else if(polygon_category && epsilon_value){
+      //Display Category
       request_and_display_gemeinden(polygon_category, epsilon_value,"", "");
     }else if (specific_location_hierarchy_id && epsilon_value){
+      //Display locations by location hierarchy
       request_and_display_gemeinden("", epsilon_value,"", specific_location_hierarchy_id);
     }else{
       jQuery("#location_category").val("");
@@ -33,13 +36,17 @@ jQuery(document).ready(function(){
   
 
   jQuery("#simplify_polygons").on("click", function(){
-    var polygon_category = jQuery("#location_category").val();
-    var epsilon_value = jQuery("#epsilon_factor").val();
-    var specific_location = jQuery("#specific_location_id").val();
+    var polygon_category            = jQuery("#location_category").val();
+    var epsilon_value               = jQuery("#epsilon_factor").val();
+    var specific_location           = jQuery("#specific_location_id").val();
     var specific_location_hierarchy = jQuery("#specific_location_hierarchy_id").val();
 
     if((polygon_category || specific_location || specific_location_hierarchy) && epsilon_value ){
-      request_gemeinden_jq(polygon_category,epsilon_value,specific_location,specific_location_hierarchy);
+      //working simplification algorithm
+      // request_gemeinden_jq(polygon_category,epsilon_value,specific_location,specific_location_hierarchy);
+
+      //TODO adjust algorithm to eliminate misallighment/holes/overlaps
+      parse_hierarchy_polygons(polygon_category,epsilon_value,specific_location,specific_location_hierarchy);
    }else{
       jQuery("#location_category").val("");
       jQuery("#epsilon_factor").val("");
@@ -70,6 +77,54 @@ function request_gemeinden_jq(polygon_category, epsilon_val, specific_location, 
       }});
 }
 
+function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_location, specific_location_hierarchy){
+  jQuery.ajax({
+         url: ajaxurl, 
+         data:{
+          action: "get_hierarchy_polygons",
+          polygon_category : polygon_category,
+          specific_location : specific_location,
+          specific_location_hierarchy: specific_location_hierarchy
+         },
+         success: function(result){
+         locations_info = JSON.parse(result);
+         console.log("hierarchy polygons:");
+         console.log(locations_info);
+
+         for (var i = locations_info.length - 1; i >= 0; i--) {
+          polygon = locations_info[i].coordinates;
+
+           for (var j = locations_info.length - 1; j >= 0; j--) {
+            if(i != j){
+              polygon_to_compare = locations_info[j].coordinates;
+              broken_down_polygon = find_start_end_match(polygon, polygon_to_compare);
+            }
+           }
+         }
+
+      }});
+}
+
+
+
+function find_start_end_match(polygon1, polygon2){
+  console.log("compare polygons");
+  // console.log(polygon1);
+  // console.log(polygon2);
+  pol1_coord = parseGeoDataArray(polygon1)
+  pol2_coord = parseGeoDataArray(polygon2)
+
+  pol1 = turf.polygon(pol1_coord)
+  pol2 = turf.polygon(pol2_coord)
+  console.log(pol1);
+  console.log(pol2);
+  intersection = turf.intersect(pol1, pol2);
+  try{
+    console.log(intersection)
+  }catch(e){
+    console.log(e)
+  }
+}
 
 /*
 get polygon data for one location
@@ -157,6 +212,7 @@ function parse_requsted_data_jsts(data,epsilon){
   try{
         var geo_id = requested_data[0].id;
         if(requested_data){
+          console.log(requested_data[0].coord);
           simplified_data = jsts_simplify(requested_data[0].coord,epsilon);
           send_modified_data_qj(simplified_data,geo_id,epsilon);
         }
@@ -215,7 +271,7 @@ function jsts_simplify(polygon, epsilon){
   // var simplified_geometry = topologyPreservingSimplifier.getResultGeometry();
 
   //DouglasPeuckerSimplifier
-  //var douglasPeuckerSimplifier = new jsts.simplify.DouglasPeuckerSimplifier(firstRead);
+  var douglasPeuckerSimplifier = new jsts.simplify.DouglasPeuckerSimplifier(firstRead);
   var simplified_geometry = jsts.simplify.DouglasPeuckerSimplifier.simplify(firstRead, epsilon);
 
 

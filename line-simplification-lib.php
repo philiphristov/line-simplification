@@ -29,8 +29,10 @@ function pol_simpl_scripts($hook) {
     wp_enqueue_script( 'jsts', plugins_url('line-simplification') . '/js/jsts.min.js' );
     wp_enqueue_script( 'map', plugins_url('line-simplification') . '/js/map.js' );
     wp_enqueue_script( 'geo', plugins_url('line-simplification') . '/js/geo.js' );
+    wp_enqueue_script( 'geo-to-arr', plugins_url('line-simplification') . '/js/geo-to-arr.js' );
     wp_enqueue_script( 'line_simpl', plugins_url('line-simplification') . '/js/line_simplification.js' );
     wp_enqueue_script( 'req_data', plugins_url('line-simplification') . '/js/request_data.js' );
+    wp_enqueue_script( 'turf_min', plugins_url('line-simplification') . '/js/turf.min.js' );
 
 
     ?>
