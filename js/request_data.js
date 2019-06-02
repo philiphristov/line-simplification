@@ -6,6 +6,8 @@ var next_index;
 var error;
 var check_index;
 
+polygons_to_simplify = {};
+
 jQuery(document).ready(function(){
 
   jQuery("#display_simplified_polygons").on("click", function(){
@@ -93,36 +95,50 @@ function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_locati
 
          for (var i = locations_info.length - 1; i >= 0; i--) {
           polygon = locations_info[i].coordinates;
+          polygon1_id = locations_info[i].id;
 
            for (var j = locations_info.length - 1; j >= 0; j--) {
             if(i != j){
               polygon_to_compare = locations_info[j].coordinates;
-              broken_down_polygon = find_start_end_match(polygon, polygon_to_compare);
+              polygon2_id = locations_info[j].id;
+              broken_down_polygon = find_start_end_match(polygon, polygon1_id, polygon_to_compare, polygon2_id);
             }
            }
          }
 
+         console.log(polygons_to_simplify);
+
       }});
 }
 
+function find_start_end_match(polygon1, pol1_id, polygon2, pol2_id){
 
-
-function find_start_end_match(polygon1, polygon2){
-  console.log("compare polygons");
-  // console.log(polygon1);
-  // console.log(polygon2);
   pol1_coord = parseGeoDataArray(polygon1)
   pol2_coord = parseGeoDataArray(polygon2)
 
   pol1 = turf.polygon(pol1_coord)
   pol2 = turf.polygon(pol2_coord)
-  console.log(pol1);
-  console.log(pol2);
-  intersection = turf.intersect(pol1, pol2);
+
+  
   try{
-    console.log(intersection)
+    intersection = turf.intersect(pol1, pol2);
+
+    if(polygons_to_simplify[pol1_id]){
+      intersections1 = polygons_to_simplify[pol1_id].intersection
+      polygons_to_simplify[pol1_id] = {intersection: intersections1.push(intersection), polygon: pol1};
+    }else{
+      polygons_to_simplify[pol1_id] = {intersection: intersection, polygon: pol1};
+    }
+    
+    if(polygons_to_simplify[pol2_id]){
+      intersections2 = polygons_to_simplify[pol2_id].intersection
+      polygons_to_simplify[pol2_id] = {intersection: intersections2.push(intersection), polygon: pol2};
+    }else{
+      polygons_to_simplify[pol2_id] = {intersection: intersection, polygon: pol2};
+    }
+
   }catch(e){
-    console.log(e)
+    // console.log(e)
   }
 }
 
