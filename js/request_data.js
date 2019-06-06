@@ -107,7 +107,10 @@ function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_locati
          }
 
          console.log(polygons_to_simplify);
-         display_polygon_intersections(polygons_to_simplify)
+         // display_polygon_intersections(polygons_to_simplify);
+         rebuild_polygons();
+
+         display_simplified(polygons_to_simplify)
 
       }});
 }
@@ -134,13 +137,13 @@ function find_start_end_match(polygon1, pol1_id, polygon2, pol2_id){
         polygons_to_simplify[pol1_id] = {intersection: arr, polygon: pol1};
       }
 
-      if(polygons_to_simplify.hasOwnProperty(pol2_id)){
+      /*if(polygons_to_simplify.hasOwnProperty(pol2_id)){
         polygons_to_simplify[pol2_id].intersection.push(intersection);
       }else{
         arr = new Array();
         arr.push(intersection);
         polygons_to_simplify[pol2_id] = {intersection: arr, polygon: pol2};
-      }
+      }*/
       
     }
 
@@ -150,69 +153,112 @@ function find_start_end_match(polygon1, pol1_id, polygon2, pol2_id){
 }
 
 function rebuild_polygons(){
-  for (var polygon in polygons_to_simplify) {
-    if (polygons_to_simplify.hasOwnProperty(polygon)) {
-      var intersections = polygons_to_simplify[polygon].intersections
+  for (var pol_id in polygons_to_simplify) {
+    if (polygons_to_simplify.hasOwnProperty(pol_id)) {
+      var intersections = polygons_to_simplify[pol_id].intersection
+      var polygon = polygons_to_simplify[pol_id].polygon.geometry.coordinates;
+
+      polygons_to_simplify[pol_id]['simplified'] = get_start_end_index(polygon, intersections);
     }
   }
 }
 
 
-function get_start_end_index(polygon, intersection){
-  var intersection_start = intersection[0];
-  var intersection_end = intersection[intersection.length - 1];
+function get_start_end_index(multipolygon, intersections){
+  var intersections_start_end = new Array();
 
-  var start_index = 0;
-  var end_index = 0;
+  for (var i = 0; i < intersections.length; i++){
 
-  for (var i = 0; i < polygon.length; i++){
-    var polygon_coordinates = polygon[i];
-    if(intersection_start){
+    var intersection = intersections[i].geometry.coordinates;
 
+    if(intersection[0][0] instanceof Array){
+      var intersection_start_lat = intersection[0][0][0];
+      var intersection_start_lng = intersection[0][0][1];
+    }else{
+      var intersection_start_lat = intersection[0][0];
+      var intersection_start_lng = intersection[0][1];
     }
-  }
-}
-
-function display_polygon_intersections(polygon_data){
-  //remove old polygons
-  map.data.forEach(function(feature) {
-      map.data.remove(feature);
-  });
-
-  for (var key in polygon_data) {
-
-    data_type = polygon_data[key].polygon.geometry.type;
-    polygon = polygon_data[key].polygon.geometry.coordinates;
-    intersections = polygon_data[key].intersection
-
     
-    map.data.addGeoJson(polygon_data[key].polygon);
-
-    map.data.setStyle(function(feature) {
-      var opacity = 0.4;
-      return ({
-        fillOpacity:0.4,
-        strokeWeight: 0.1,
-        fillColor: 'blue'
-      });
-    });
-
-    for (is = 0; is < intersections.length; is++){
-      intersection = intersections[is].geometry.coordinates;
-
-      map.data.addGeoJson(intersections[is]);
-
-      map.data.setStyle(function(feature) {
-        var opacity = 0.4;
-        return ({
-          fillOpacity:0.4,
-          strokeWeight: 0.7,
-          strokeColor: 'red'
-        });
-      });
+    if(intersection[0][0] instanceof Array){
+      var intersection_end_lat = intersection[intersection.length - 1][0][0];
+      var intersection_end_lng = intersection[intersection.length - 1][0][1];
+    }else{
+      var intersection_end_lat = intersection[intersection.length - 1][0];
+      var intersection_end_lng = intersection[intersection.length - 1][1];
     }
 
+    intersections_start_end.push([[intersection_start_lat, intersection_start_lng],[intersection_end_lat, intersection_end_lng]]);
   }
+  
+  var index = 0;
+
+
+  var in_intersection = false;
+
+  reconstructed_polygon = new Array();
+
+  for (var i = 0; i < multipolygon.length; i++){
+    var polygon = multipolygon[i];
+
+    line_coordinates = new Object();
+
+    for (var j = 0; j < polygon.length; j++){
+      var polygon_coordinates = polygon[j];
+
+      var polygon_coordinates_lat = parseFloat(polygon_coordinates[0].toFixed(6));
+      var polygon_coordinates_lng = parseFloat(polygon_coordinates[1].toFixed(6));
+      
+      if(is_intersection(polygon_coordinates_lat, intersections_start_end)){
+        in_intersection = true;
+      }
+
+      if(is_intersection(polygon_coordinates_lat, intersections_start_end)){
+        in_intersection = false;
+      }
+
+      if(in_intersection){
+        index+=index
+        line_coordinates[index].push([polygon_coordinates_lat, polygon_coordinates_lng]);
+      }else{
+        // line_coordinates[index] = new Array();
+        if(line_coordinates[index]){
+          line_coordinates[index].push([polygon_coordinates_lat, polygon_coordinates_lng]);
+        }else{
+          line_coordinates[index] = new Array();
+          line_coordinates[index].push([polygon_coordinates_lat, polygon_coordinates_lng]);          
+        }
+      }
+
+      in_intersection = false;
+    }
+    // simplify
+
+    var options = {tolerance: 0.001, highQuality: true};
+    for (line in line_coordinates){
+      if(line_coordinates.hasOwnProperty(line)){
+        var line = turf.polygon([line_coordinates[line]])
+        var simplified = turf.simplify(line, options);
+
+        reconstructed_polygon.push(simplified);
+      }
+    }
+    
+  }
+
+  return reconstructed_polygon;
+}
+
+function is_intersection(location, intersections){
+  intersects = false;
+  for (var i = intersections.length - 1; i >= 0; i--) {
+    intersection = intersections[i];
+    if(intersection[0][0] == location[0]){
+      intersects = true;
+      break;
+    }
+  }
+
+  return intersects;
 }
 
 /*
@@ -414,3 +460,66 @@ function request_and_display_gemeinden(polygon_category, epsilon_value,specific_
 
 
 
+ function display_polygon_intersections(polygon_data){
+
+  map.data.forEach(function(feature) {
+      map.data.remove(feature);
+  });
+
+  for (var key in polygon_data) {
+
+    data_type = polygon_data[key].polygon.geometry.type;
+    polygon = polygon_data[key].polygon.geometry.coordinates;
+    intersections = polygon_data[key].intersection
+
+    
+    map.data.addGeoJson(polygon_data[key].polygon);
+
+    map.data.setStyle(function(feature) {
+      var opacity = 0.4;
+      return ({
+        fillOpacity:0.4,
+        strokeWeight: 1,
+        strokeColor: 'blue'
+      });
+    });
+
+    for (is = 0; is < intersections.length; is++){
+      intersection = intersections[is].geometry.coordinates;
+
+      map.data.addGeoJson(intersections[is]);
+
+      map.data.setStyle(function(feature) {
+        var opacity = 0.4;
+        return ({
+          fillOpacity:0.4,
+          strokeWeight: 0.7,
+          strokeColor: 'red'
+        });
+      });
+    }
+
+  }
+}
+
+function display_simplified(polygon_data){
+
+  map.data.forEach(function(feature) {
+      map.data.remove(feature);
+  });
+
+  for (var key in polygon_data) {
+    
+    map.data.addGeoJson(polygon_data[key].simplified[0]);
+
+    map.data.setStyle(function(feature) {
+      var opacity = 0.4;
+      return ({
+        fillOpacity:0.4,
+        strokeWeight: 1,
+        strokeColor: 'blue'
+      });
+    });
+
+  }
+}

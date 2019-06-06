@@ -103,7 +103,7 @@ function parsePolygonCoordsArray (string){
 		for (var /** number */ j = 0; j < values.length; j++) {
 			//console.log(values[j]);
 	 		var /** Array<string> */ coord = values[j].split(" ");
-	 		coords[i].push([coord[1] * 1, coord[0] * 1]);
+	 		coords[i].push([coord[0] * 1, coord[1] * 1]);
 		}
  	}
  	return coords;
