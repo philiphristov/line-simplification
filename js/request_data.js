@@ -126,17 +126,6 @@ function find_start_end_match(polygon1, pol1_id, polygon2, pol2_id){
 
     if(intersection){
 
-      // intersections1 = [].push(polygons_to_simplify[pol1_id].intersection)
-      // polygons_to_simplify[pol1_id] = {intersection: intersections1.push(intersection), polygon: pol1};
-
-      // intersections2 = [].push(polygons_to_simplify[pol2_id].intersection)
-      // polygons_to_simplify[pol2_id] = {intersection: intersections2.push(intersection), polygon: pol2};
-
-      // console.log("pol 1 and 2:");
-      // console.log(pol1_id + " " + pol2_id);
-      // console.log(polygons_to_simplify.hasOwnProperty(pol1_id));
-
-
       if(polygons_to_simplify.hasOwnProperty(pol1_id)){
         polygons_to_simplify[pol1_id].intersection.push(intersection);
       }else{
@@ -153,14 +142,6 @@ function find_start_end_match(polygon1, pol1_id, polygon2, pol2_id){
         polygons_to_simplify[pol2_id] = {intersection: arr, polygon: pol2};
       }
       
-      // if(polygons_to_simplify.hasOwnProperty(pol2_id)){
-      //   intersections2 = [].push(polygons_to_simplify[pol2_id].intersection)
-      //   polygons_to_simplify[pol2_id] = {intersection: intersections2.push(intersection), polygon: pol2};
-      //   console.log("adding extra");
-      // }else{
-      //   polygons_to_simplify[pol2_id] = {intersection: intersection, polygon: pol2};
-      // }
-
     }
 
   }catch(e){
@@ -168,77 +149,69 @@ function find_start_end_match(polygon1, pol1_id, polygon2, pol2_id){
   }
 }
 
+function rebuild_polygons(){
+  for (var polygon in polygons_to_simplify) {
+    if (polygons_to_simplify.hasOwnProperty(polygon)) {
+      var intersections = polygons_to_simplify[polygon].intersections
+    }
+  }
+}
+
+
+function get_start_end_index(polygon, intersection){
+  var intersection_start = intersection[0];
+  var intersection_end = intersection[intersection.length - 1];
+
+  var start_index = 0;
+  var end_index = 0;
+
+  for (var i = 0; i < polygon.length; i++){
+    var polygon_coordinates = polygon[i];
+    if(intersection_start){
+
+    }
+  }
+}
+
 function display_polygon_intersections(polygon_data){
+  //remove old polygons
+  map.data.forEach(function(feature) {
+      map.data.remove(feature);
+  });
+
   for (var key in polygon_data) {
 
     data_type = polygon_data[key].polygon.geometry.type;
     polygon = polygon_data[key].polygon.geometry.coordinates;
+    intersections = polygon_data[key].intersection
 
-    if(polygon_data[key].intersection){
-      intersections = polygon_data[key].intersection
-    }else{
-      intersections = null
-    }
     
+    map.data.addGeoJson(polygon_data[key].polygon);
 
-    if (data_type == "Polygon" || data_type == "Feature"){
-      var paths = new Array();
+    map.data.setStyle(function(feature) {
+      var opacity = 0.4;
+      return ({
+        fillOpacity:0.4,
+        strokeWeight: 0.1,
+        fillColor: 'blue'
+      });
+    });
 
-      for(var i = 0; i < polygon.length; i++){
-        var coords = polygon[i];
+    for (is = 0; is < intersections.length; is++){
+      intersection = intersections[is].geometry.coordinates;
 
-        for(var j = 0; j < coords.length; j ++ ){
-          paths.push({lat:coords[j][0],lng:coords[j][1]});
-        }
-      }
-    
-      // Construct the polygon.
-      var options = {"geometry" :  new google.maps.Data.Polygon([paths])};
-      var feature = new google.maps.Data.Feature(options);
+      map.data.addGeoJson(intersections[is]);
 
-      map.data.add(feature);
-     
       map.data.setStyle(function(feature) {
-            var color = "red";
-            var opacity = 0.4;
-            return ({
-              fillOpacity:opacity,
-              strokeWeight: 1
-            });
-       });
-    }else{
-      console.log(data_type);
+        var opacity = 0.4;
+        return ({
+          fillOpacity:0.4,
+          strokeWeight: 0.7,
+          strokeColor: 'red'
+        });
+      });
     }
 
-    if(intersections){
-      
-      for (is = 0; is < intersections.length; is++){
-        intersection = intersections[is].geometry.coordinates;
-
-        if(intersection){
-          var path = Array();
-
-          for(var i = 0; i < intersection.length; i++){
-            var coords = intersection[i];
-
-            for(var j = 0; j < coords.length; j ++ ){
-              path.push({lat:coords[j][0],lng:coords[j][1]});
-            }
-          }
-
-          var polyline = new google.maps.Polyline({
-          path: path,
-          color: "blue"
-          });
-
-          polyline.setMap(map);
-        }
-      }
-
-    }
-    
-
-   
   }
 }
 
@@ -328,7 +301,6 @@ function parse_requsted_data_jsts(data,epsilon){
   try{
         var geo_id = requested_data[0].id;
         if(requested_data){
-          console.log(requested_data[0].coord);
           simplified_data = jsts_simplify(requested_data[0].coord,epsilon);
           send_modified_data_qj(simplified_data,geo_id,epsilon);
         }
