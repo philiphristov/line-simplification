@@ -171,27 +171,48 @@ function get_start_end_index(multipolygon, intersections){
 
     var intersection = intersections[i].geometry.coordinates;
 
-  /*  if(intersection[0][0] instanceof Array){
-      var intersection_start_lat = intersection[0][0][0];
-      var intersection_start_lng = intersection[0][0][1];
-    }else{
-      var intersection_start_lat = intersection[0][0];
-      var intersection_start_lng = intersection[0][1];
-    }
+  //   // if(intersection[0][0] instanceof Array){
+  //   //   var intersection_start_lat = intersection[0][0][0];
+  //   //   var intersection_start_lng = intersection[0][0][1];
+  //   // }else{
+  //   //   var intersection_start_lat = intersection[0][0];
+  //   //   var intersection_start_lng = intersection[0][1];
+  //   // }
     
-    if(intersection[0][0] instanceof Array){
-      var intersection_end_lat = intersection[intersection.length - 1][0][0];
-      var intersection_end_lng = intersection[intersection.length - 1][0][1];
-    }else{
-      var intersection_end_lat = intersection[intersection.length - 1][0];
-      var intersection_end_lng = intersection[intersection.length - 1][1];
+  //   // if(intersection[0][0] instanceof Array){
+  //   //   var intersection_end_lat = intersection[intersection.length - 1][0][0];
+  //   //   var intersection_end_lng = intersection[intersection.length - 1][0][1];
+  //   // }else{
+  //   //   var intersection_end_lat = intersection[intersection.length - 1][0];
+  //   //   var intersection_end_lng = intersection[intersection.length - 1][1];
+  //   // }
+  //   intersections_start_end.push([[intersection_start_lat, intersection_start_lng],[intersection_end_lat, intersection_end_lng]]);
+    // console.log(intersection)
+    for (var j = 0; j < intersection.length; j++) {
+      var coord = intersection[j]
+      
+      if(coord[0] instanceof Array){
+        var intersection_start_lat = coord[0][0];
+        var intersection_start_lng = coord[0][1];
+      }else{
+        var intersection_start_lat = coord[0];
+        var intersection_start_lng = coord[1];
+      }
+      // console.log([intersection_start_lat,intersection_start_lng])
+      if(intersection_start_lat && intersection_start_lng){
+        if(intersections_start_end[i]){
+          intersections_start_end[i].push([intersection_start_lat, intersection_start_lng]);
+        }else{
+          intersections_start_end[i] = new Array();
+          intersections_start_end[i].push([intersection_start_lat, intersection_start_lng]);
+        }
+      }
     }
-    intersections_start_end.push([[intersection_start_lat, intersection_start_lng],[intersection_end_lat, intersection_end_lng]]);
-    */
-    intersections_start_end.push(intersection)
+
   }
-  
-  // console.log(intersections_start_end)
+
+
+  console.log(intersections_start_end)
 
   var index = 99;
 
@@ -225,7 +246,6 @@ function get_start_end_index(multipolygon, intersections){
           line_coordinates[intersection_index].push([polygon_coordinates_lat, polygon_coordinates_lng]);
         }
       }else{
-        // line_coordinates[index] = new Array();
         if(line_coordinates[index]){
           line_coordinates[index].push([polygon_coordinates_lat, polygon_coordinates_lng]);
         }else{
@@ -237,8 +257,6 @@ function get_start_end_index(multipolygon, intersections){
       intersects = false;
     }
     
-    // console.log(line_coordinates)
-
     var options = {tolerance: 0.001, highQuality: true};
     for (line in line_coordinates){
       if(line_coordinates.hasOwnProperty(line)){
@@ -251,35 +269,39 @@ function get_start_end_index(multipolygon, intersections){
     
   }
 
-  var simplified_ = new Array();
 
-  reconstructed_polygon.forEach(function(element){
-    simplified_.push(element.geometry.coordinates)
-  })
-  var flatten_arr = simplified_.flat(1)
-  var split_index = find_duplicates(flatten_arr)[0]
-  var duplicate = find_duplicates(flatten_arr)[1]
+  // var collection = turf.featureCollection(reconstructed_polygon);
 
-  console.log('')
+  // var simplified_ = turf.lineToPolygon(turf.combine(collection));
 
-  console.log(split_index)
-  console.log(duplicate)
+  // console.log(reconstructed_polygon)
 
-  var split_first = flatten_arr.slice(0, split_index);
-  var last_part = flatten_arr.slice(split_index); //.splice(split_index, flatten_arr.length);
 
-  console.log(split_first)
-  console.log(last_part)
+  // var simplified_ = new Array();
+
+  // reconstructed_polygon.forEach(function(element){
+  //   simplified_.push(element.geometry.coordinates)
+  // })
+
+  // var flatten_arr = simplified_.flat(1)
+  // var split_index = find_duplicates(flatten_arr)[0]
+  // var duplicate = find_duplicates(flatten_arr)[1]
+
+
+  // var split_first = flatten_arr.slice(0, split_index);
+  // var last_part = flatten_arr.slice(split_index); //.splice(split_index, flatten_arr.length);
+
+  // processed_coordinates = [split_first.reverse(), last_part.reverse()].flat(1)
+
   
+  // if(processed_coordinates.length > 0 && processed_coordinates[0][0] == processed_coordinates[processed_coordinates.length - 1][0]){
+  //     simplified_ = turf.polygon([processed_coordinates]);
+  //     console.log(processed_coordinates);
+  // }else{
+  //     simplified_ = null
+  // }
 
-  processed_coordinates = [split_first.reverse(), last_part.reverse()].flat(1)
-
-  
-  console.log(processed_coordinates);
-
-  simplified_ = turf.polygon([processed_coordinates]);
-
-  return simplified_;
+  return reconstructed_polygon;
 }
 
 function is_intersection(location_lat, location_lng, intersections){
@@ -350,54 +372,6 @@ function request_data_qj(id_location,epsilon){
       }});
 
 
-}
-
-/*
-Parse and Simplify Polygon. 
-*/
-function parse_requsted_data(data,epsilon){
-  if(data){
-    //console.log(data);
-  }else{
-    var next_indx = locations_info.indexOf(id_last);
-    request_data_qj(locations_info[next_indx + 1],epsilon);
-    return;
-  }
-  
-  var requested_data = JSON.parse(data);
-   
-  // console.log(requested_data);
-  
-  try{
-              var geo_id = requested_data[0].id;
-              if(requested_data){
-
-              //jsts_simplify(requested_data[0].coord);
-
-                 var polygon_data = parse_data(requested_data[0].coord);
-
-                 if(requested_data[0].coord.substring(0, 5) != "MULTI"){  // .substring(0, 4) == "MULTI" // 
-                   simplified_data = simplify_polygon_line(polygon_data, epsilon); //  0.0012
-
-                   send_modified_data_qj(JSON.stringify(rebuild_polygon_str(simplified_data)),geo_id,epsilon);
-                 }else{
-                   simplified_data = simplify_multi_line(polygon_data, epsilon);
-      
-                   send_modified_data_qj(JSON.stringify(rebuild_multipolygon_str(simplified_data)),geo_id,epsilon);               
-                 }
-
-         
-                 //calculate_difference(arr,simplified_data);
-              
-              }
-              }catch(e){
-                console.log(e);
-
-                id_last = geo_id;
-                next_index = locations_info.indexOf(id_last) + 1;
-                request_data_qj(locations_info[next_index],epsilon);
-                check_index = next_index;
-              }
 }
 
 function parse_requsted_data_jsts(data,epsilon){
@@ -576,22 +550,81 @@ function display_simplified(polygon_data){
   });
 
   for (var key in polygon_data) {
-    
-    for (var i = polygon_data[key].simplified.length - 1; i >= 0; i--) {
-      simplified = polygon_data[key].simplified[i];
 
-      map.data.addGeoJson(simplified);
+    if(polygon_data[key].simplified){
 
-      map.data.setStyle(function(feature) {
-        var opacity = 0.4;
-        return ({
-          fillOpacity:0.4,
-          strokeWeight: 1,
-          strokeColor: 'blue'
+      for (var i = polygon_data[key].simplified.length - 1; i >= 0; i--) {
+        simplified = polygon_data[key].simplified[i];
+        map.data.addGeoJson(simplified);
+
+        map.data.setStyle(function(feature) {
+          var opacity = 0.4;
+          return ({
+            fillOpacity:0.4,
+            strokeWeight: 1,
+            strokeColor: 'blue'
+          });
         });
-      });
+
+      }
 
     }
+
   }
 
+}
+
+
+
+
+
+/*DEPRICATED*/
+
+
+/*
+Parse and Simplify Polygon. 
+*/
+function parse_requsted_data(data,epsilon){
+  if(data){
+    //console.log(data);
+  }else{
+    var next_indx = locations_info.indexOf(id_last);
+    request_data_qj(locations_info[next_indx + 1],epsilon);
+    return;
+  }
+  
+  var requested_data = JSON.parse(data);
+   
+  // console.log(requested_data);
+  
+  try{
+              var geo_id = requested_data[0].id;
+              if(requested_data){
+
+              //jsts_simplify(requested_data[0].coord);
+
+                 var polygon_data = parse_data(requested_data[0].coord);
+
+                 if(requested_data[0].coord.substring(0, 5) != "MULTI"){  // .substring(0, 4) == "MULTI" // 
+                   simplified_data = simplify_polygon_line(polygon_data, epsilon); //  0.0012
+
+                   send_modified_data_qj(JSON.stringify(rebuild_polygon_str(simplified_data)),geo_id,epsilon);
+                 }else{
+                   simplified_data = simplify_multi_line(polygon_data, epsilon);
+      
+                   send_modified_data_qj(JSON.stringify(rebuild_multipolygon_str(simplified_data)),geo_id,epsilon);               
+                 }
+
+         
+                 //calculate_difference(arr,simplified_data);
+              
+              }
+              }catch(e){
+                console.log(e);
+
+                id_last = geo_id;
+                next_index = locations_info.indexOf(id_last) + 1;
+                request_data_qj(locations_info[next_index],epsilon);
+                check_index = next_index;
+              }
 }
