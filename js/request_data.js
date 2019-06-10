@@ -212,8 +212,6 @@ function get_start_end_index(multipolygon, intersections){
   }
 
 
-  console.log(intersections_start_end)
-
   var index = 99;
 
 
@@ -270,9 +268,9 @@ function get_start_end_index(multipolygon, intersections){
   }
 
 
-  // var collection = turf.featureCollection(reconstructed_polygon);
+  var collection = turf.featureCollection(reconstructed_polygon);
 
-  // var simplified_ = turf.lineToPolygon(turf.combine(collection));
+  var simplified_ = turf.lineToPolygon(turf.combine(collection));
 
   // console.log(reconstructed_polygon)
 
@@ -301,7 +299,7 @@ function get_start_end_index(multipolygon, intersections){
   //     simplified_ = null
   // }
 
-  return reconstructed_polygon;
+  return simplified_;
 }
 
 function is_intersection(location_lat, location_lng, intersections){
@@ -550,23 +548,25 @@ function display_simplified(polygon_data){
   });
 
   for (var key in polygon_data) {
+    
 
     if(polygon_data[key].simplified){
+      console.log(polygon_data[key].simplified);
 
-      for (var i = polygon_data[key].simplified.length - 1; i >= 0; i--) {
-        simplified = polygon_data[key].simplified[i];
-        map.data.addGeoJson(simplified);
+      simplified = polygon_data[key].simplified;
 
-        map.data.setStyle(function(feature) {
-          var opacity = 0.4;
-          return ({
-            fillOpacity:0.4,
-            strokeWeight: 1,
-            strokeColor: 'blue'
-          });
+      map.data.addGeoJson(simplified);
+
+      map.data.setStyle(function(feature) {
+        var opacity = 0.4;
+        return ({
+          fillOpacity:0.4,
+          strokeWeight: 1,
+          strokeColor: 'blue'
         });
+      });
 
-      }
+      
 
     }
 
