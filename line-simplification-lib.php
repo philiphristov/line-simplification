@@ -33,6 +33,7 @@ function pol_simpl_scripts($hook) {
     wp_enqueue_script( 'line_simpl', plugins_url('line-simplification') . '/js/line_simplification.js' );
     wp_enqueue_script( 'req_data', plugins_url('line-simplification') . '/js/request_data.js' );
     wp_enqueue_script( 'turf_min', plugins_url('line-simplification') . '/js/turf.min.js' );
+    wp_enqueue_script( 'simplify', plugins_url('line-simplification') . '/js/simplify.js' );
 
 
     ?>
