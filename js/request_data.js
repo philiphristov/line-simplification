@@ -110,27 +110,37 @@ function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_locati
          // display_polygon_intersections(polygons_to_simplify);
          rebuild_polygons();
 
-         // display_simplified(polygons_to_simplify);
+         //display_simplified(polygons_to_simplify);
 
       }});
 }
 
 function find_intersections(polygon1, pol1_id, polygon2, pol2_id){
+  
 
   var pol1_coord = parseGeoDataArray(polygon1)
   var pol2_coord = parseGeoDataArray(polygon2)
 
-  var pol1 = turf.polygon(pol1_coord)
-  var pol2 = turf.polygon(pol2_coord)
+  // console.log(polygon1)
+  // console.log(pol1_coord)
+
+  
   
   try{
 
+    var pol1 = turf.polygon(pol1_coord)
+    var pol2 = turf.polygon(pol2_coord)
+
     var intersection = turf.intersect(pol1, pol2);
+
+    // display_feature(intersection)
+
     // var line = turf.polygonToLine(pol1);
     // var intersection = turf.lineSplit(line, pol2);
     // console.log(intersection)
 
     if(intersection){
+      // console.log(intersection)
 
       if(polygons_to_simplify.hasOwnProperty(pol1_id)){
 
@@ -177,9 +187,7 @@ function rebuild_polygons(){
   for (var pol_id in polygons_to_simplify) {
     if (polygons_to_simplify.hasOwnProperty(pol_id)) {
       var intersections = polygons_to_simplify[pol_id].intersection
-      // var polygon = polygons_to_simplify[pol_id].polygon.geometry.coordinates;
       var polygon = polygons_to_simplify[pol_id].polygon;
-      // polygons_to_simplify[pol_id]['simplified'] = simplify_and_perserve(polygon, intersections);
       polygons_to_simplify[pol_id]['simplified'] = new_simplify_and_perserve(polygon, intersections);
     }
   }
@@ -198,7 +206,7 @@ function new_simplify_and_perserve(multipolygon, intersections){
   for (intersection in intersections){
     if(intersections.hasOwnProperty(intersection)){
       var multilinestring = intersections[intersection].geometry.coordinates
-      
+
       for(var i=0; i < multilinestring.length; i++){
         if(multilinestring.length > 2){
           var coords = multilinestring[i][0]
@@ -229,14 +237,22 @@ function new_simplify_and_perserve(multipolygon, intersections){
           arr.push([last_coords[0], last_coords[1]]);
           intersections_arr[intersection] = arr;
         }
+      }else{
       }
 
     }
   }
 
-  console.log(intersections_arr)
 
   var multiline_coordinates =[construct_outer_lines(multipolygon, intersections_arr)];
+
+  // console.log(multipolygon)
+  // if(multipolygon.length >= 2){
+  //   return ''
+  // }
+
+  // console.log(multiline_coordinates)
+
 
   for (var i = 0; i <  multiline_coordinates.length; i++) {
     var line_coordinates = multiline_coordinates[i];
@@ -247,26 +263,20 @@ function new_simplify_and_perserve(multipolygon, intersections){
         var current_line = line_coordinates[line];
         if(current_line.length > 2){
 
-          
-
           var simplify_ = simplify(current_line, 0.0003, true);
 
           var line_string = turf.lineString(current_line)
-          // var line_string = turf.lineString(simplify_)
+          var line_string = turf.lineString(simplify_)
 
-          map.data.addGeoJson(line_string);
+          // display_feature(line_string)
 
-          map.data.setStyle(function(feature) {
-            var opacity = 0.4;
-            return ({
-              fillOpacity:0.4,
-              strokeWeight: 1,
-              strokeColor: 'blue'
-            });
-          });
-
+          reconstructed_polygon.push(line_string);
+        }else{
+          console.log('smaller')
+          console.log(current_line)
+          display_feature(turf.point(current_line))
         }
-        reconstructed_polygon.push(line_string);      
+        // reconstructed_polygon.push(line_string);      
       }
     }
   }
@@ -278,37 +288,39 @@ function new_simplify_and_perserve(multipolygon, intersections){
       var simplify_ = simplify(intersections_arr[intersection], 0.0003, true);
 
       var line_string = turf.lineString(intersections_arr[intersection])
-      // var line_string = turf.lineString(simplify_)
+      var line_string = turf.lineString(simplify_)
 
-      map.data.addGeoJson(line_string);
-
-      map.data.setStyle(function(feature) {
-        var opacity = 0.4;
-        return ({
-          fillOpacity:0.4,
-          strokeWeight: 1,
-          strokeColor: 'blue'
-        });
-      });
-
+      // display_feature(line_string)
 
       reconstructed_polygon.push(line_string);      
     }
   }
 
-  if(reconstructed_polygon.length == 1){
-    var collection = turf.polygon([reconstructed_polygon[0].geometry.coordinates]);
-  }else{
-    poly_array = new Array();
+  // if(reconstructed_polygon.length == 1){
+  //   var collection = turf.polygon([reconstructed_polygon[0].geometry.coordinates]);
+  // }else{
+  //   poly_array = new Array();
 
-    for (var y = 0; y < reconstructed_polygon.length ; y++) {
-      if(reconstructed_polygon[y]){
-        poly_array.push(reconstructed_polygon[y].geometry.coordinates)
-      }
-    }
-    var collection = turf.multiPolygon([poly_array]);
-  }
+  //   for (var y = 0; y < reconstructed_polygon.length ; y++) {
+  //     if(reconstructed_polygon[y]){
+  //       poly_array.push(reconstructed_polygon[y].geometry.coordinates)
+  //     }
+  //   }
+  //   var collection = turf.multiPolygon([poly_array]);
+  // }
 
+  // console.log(reconstructed_polygon)
+  
+  // reconstructed_polygon = reconstructed_polygon.map(el => remove_start_end(el))
+  
+  concatenate_linestrings(reconstructed_polygon)
+
+  // reconstructed_polygon = reconstructed_polygon.filter(el => el.geometry.coordinates.length > 4 )
+
+  reconstructed_polygon.map(el => display_feature(el))
+
+  // collection = turf.lineToPolygon(turf.featureCollection(reconstructed_polygon))  
+  collection = []
   return collection;
 }
 
@@ -333,12 +345,14 @@ function construct_outer_lines(polygon, intersections){
 
     for(intersection in intersections){
       if(intersections.hasOwnProperty(intersection)){
+        
+        // Uncaught Error: coordinates must contain numbers -> 180248 use .flat(1) - has to be conditional only when array depth > 2??
+        // console.log(intersections[intersection])
 
         var intersection_line = turf.lineString(intersections[intersection])
         // var isPointOnLine = turf.booleanPointOnLine(pt, intersection_line);
         var isPointOnLine = point_on_line(polygon_coordinates_lat, polygon_coordinates_lng, intersections[intersection]);
         // console.log(isPointOnLine)
-        console.log(isPointOnLine)
 
         intersections_bool_arr.push(isPointOnLine)
       }
@@ -388,6 +402,101 @@ function point_on_line(lat, lng, line){
   }
   return bool;
 }
+
+function remove_start_end(lineString){
+  var first_coords = lineString.geometry.coordinates[0]
+  var last_coords = lineString.geometry.coordinates[lineString.geometry.coordinates.length -1]
+  if (first_coords[0] == last_coords[0] && first_coords[1] == last_coords[1]) {
+    lineString.geometry.coordinates.pop()
+  }  
+
+  return lineString;
+}
+
+function concatenate_linestrings(feature_array){
+  var coordinates_array = new Array()
+
+  for (feature in feature_array){
+    if(feature_array.hasOwnProperty(feature)){
+      coordinates_array.push(feature_array[feature].geometry.coordinates)
+    }
+  }
+
+  // TODO Append lines following an order nearest first/last points
+
+  console.log(coordinates_array)
+
+  var reconstructed_array = new Array()
+  reconstructed_array.push(coordinates_array[0])
+  for (var i = 1; i < coordinates_array.length; i++){
+    var start_coords = coordinates_array[i][0]
+    var end_coords = coordinates_array[i][1]
+    
+    min_index = get_nearest_line(i, end_coords, coordinates_array)
+
+    reconstructed_array.push(coordinates_array[min_index])
+    coordinates_array.splice(min_index, 1);
+  }
+
+  // counter = 0
+  // reconstructed_array.push()
+  // while(coordinates_array.length > 0){
+  //   reconstructed_array.push(coordinates_array[counter])
+  //   get_nearest_line(end_points, next_line)
+  //   coordinates_array.shift()
+
+  //   counter++
+  // }
+
+  console.log(reconstructed_array)
+}
+
+function get_nearest_line(index_arr, end_coords, coordinates_array){
+  
+  distance_object = new Object()
+
+  for (var i = 0; i < coordinates_array.length; i++) {
+    if(index_arr != i){
+      var start_coordinates = coordinates_array[i][0]
+
+      var from = turf.point(end_coords);
+      var to = turf.point(start_coordinates);
+      var options = {units: 'kilometers'};
+
+      var distance = turf.distance(from, to, options);
+
+      distance_object[i] = distance
+    }
+    
+  }
+
+  min_distance_index = Infinity
+  min_index = 0
+  
+  for(distance in distance_object){
+    if(distance_object[distance] < min_distance_index){
+      min_distance_index = distance_object[distance]
+      min_index = distance
+    }
+  }
+
+  return min_index
+}
+
+function display_feature(feature_data){
+  map.data.addGeoJson(feature_data);
+
+  map.data.setStyle(function(feature) {
+    var opacity = 0.4;
+    return ({
+      fillOpacity:0.4,
+      strokeWeight: 1,
+      strokeColor: 'red'
+    });
+  });
+}
+
+
 /*
 get polygon data for one location
 Init Simplification
