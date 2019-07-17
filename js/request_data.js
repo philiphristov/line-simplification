@@ -249,7 +249,7 @@ function new_simplify_and_perserve(multipolygon, intersections){
           var line_string = turf.lineString(current_line)
           // var line_string = turf.lineString(simplify_)
 
-          display_feature(line_string)
+          // display_feature(line_string)
 
           reconstructed_polygon.push(line_string);
         }
@@ -281,7 +281,7 @@ function new_simplify_and_perserve(multipolygon, intersections){
 
   // testing functions
   // reconstructed_polygon = reconstructed_polygon.filter(el => el.geometry.coordinates.length > 4 )
-  // reconstructed_polygon.map(el => display_feature(el))
+  reconstructed_polygon.map(el => display_feature(el))
 
   collection = []
   return collection;
