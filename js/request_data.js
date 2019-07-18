@@ -237,7 +237,6 @@ function new_simplify_and_perserve(multipolygon, intersections){
   // simplify and display outher poligon linestrings
   for (var i = 0; i <  multiline_coordinates.length; i++) {
     var line_coordinates = multiline_coordinates[i];
-    console.log(line_coordinates)
     for (line in line_coordinates){
       if(line_coordinates.hasOwnProperty(line)){
           if(line_coordinates[line].length > 2){
@@ -247,11 +246,14 @@ function new_simplify_and_perserve(multipolygon, intersections){
           var simplify_ = simplify(current_line, 0.0003, true);
 
           var line_string = turf.lineString(current_line)
-          // var line_string = turf.lineString(simplify_)
+          var line_string = turf.lineString(simplify_)
 
           // display_feature(line_string)
 
           reconstructed_polygon.push(line_string);
+        }else{
+          var current_line = line_coordinates[line];
+          reconstructed_polygon.push(current_line)
         }
       }
     }
@@ -265,7 +267,7 @@ function new_simplify_and_perserve(multipolygon, intersections){
       var simplify_ = simplify(intersections_arr[intersection], 0.0003, true);
 
       var line_string = turf.lineString(intersections_arr[intersection])
-      // var line_string = turf.lineString(simplify_)
+      var line_string = turf.lineString(simplify_)
 
       // display_feature(line_string)
 
@@ -281,7 +283,7 @@ function new_simplify_and_perserve(multipolygon, intersections){
 
   // testing functions
   // reconstructed_polygon = reconstructed_polygon.filter(el => el.geometry.coordinates.length > 4 )
-  reconstructed_polygon.map(el => display_feature(el))
+  // reconstructed_polygon.map(el => display_feature(el))
 
   collection = []
   return collection;
@@ -360,88 +362,78 @@ function point_on_line(lat, lng, line){
   return bool;
 }
 
-function remove_start_end(lineString){
-  var first_coords = lineString.geometry.coordinates[0]
-  var last_coords = lineString.geometry.coordinates[lineString.geometry.coordinates.length -1]
-  if (first_coords[0] == last_coords[0] && first_coords[1] == last_coords[1]) {
-    lineString.geometry.coordinates.pop()
-  }  
-
-  return lineString;
-}
-
-function remove_start_end_arr(arr_intersection){
-  if(arr_intersection > 2){
-    console.log(arr_intersection)
-    var first_coords = arr_intersection[0]
-    var last_coords = arr_intersection[arr_intersection.length -1]
-    if (first_coords[0] == last_coords[0] && first_coords[1] == last_coords[1]) {
-      arr_intersection.pop()
-    }  
-  }
-  return arr_intersection;
-}
 
 function concatenate_linestrings(feature_array){
   var coordinates_array = new Array()
-
+  
+  console.log(feature_array)
   for (feature in feature_array){
+    console.log(feature_array[feature])
     if(feature_array.hasOwnProperty(feature)){
-      coordinates_array.push(feature_array[feature].geometry.coordinates)
+      if(feature_array[feature].hasOwnProperty('geometry')){
+        console.log(feature_array[feature])
+        coordinates_array.push(feature_array[feature].geometry.coordinates)
+      }else{
+        console.log(feature_array[feature])
+        coordinates_array.push(feature_array[feature])
+      }
     }
   }
+
+  // console.log('unordered')
+  // console.log(coordinates_array)
 
   var reconstructed_array = new Array()
   reconstructed_array.push(coordinates_array[0])
   var coords_arr_to_compare = coordinates_array
 
-  for (var i = 1; i < coordinates_array.length; i++){
-    var start_coords = coordinates_array[i][0]
-    var end_coords = coordinates_array[i][1]
-    
-    min_index = get_nearest_line(i, end_coords, coords_arr_to_compare)
+  counter = 1
+  while(reconstructed_array.length < coordinates_array.length){
+    var start_coords = coordinates_array[counter][0]
 
-    reconstructed_array.push(coordinates_array[min_index])
-    coordinates_array.splice(min_index, 1);
+    if(coordinates_array[counter].length >= 2){
+      var end_coords = coordinates_array[counter][coordinates_array[counter].length - 1]
+    }else{
+      var end_coords = coordinates_array[counter]
+    }
+
+    min_index = get_nearest_line(counter, end_coords, coords_arr_to_compare)
+
+    counter = min_index
+    reconstructed_array.push(coordinates_array[min_index]) //.reverse()
   }
 
-  // counter = 1
-  // var reconstructed_array = new Array()
-  // reconstructed_array.push(coordinates_array[0])
+  // console.log('reconstructed')
+  // console.log(reconstructed_array)
 
-  // var coords_arr_to_compare = coordinates_array
-
-  // while(coordinates_array.length > 0){
-  //     console.log("counter: " + counter)
-  //     console.log(coordinates_array)
-  //     var start_coords = coordinates_array[counter][0]
-  //     var end_coords = coordinates_array[counter][1]
-      
-  //     min_index = get_nearest_line(counter, end_coords, coords_arr_to_compare)
-
-  //     reconstructed_array.push(coords_arr_to_compare[min_index])
-  //     coordinates_array = coordinates_array.splice(min_index, 1);
-
-  //     counter++
-  // }
+  var ordered = reconstructed_array.flat();
+  var ordered_linestring = turf.lineString(ordered)
+  display_feature(ordered_linestring)
+  // console.log('linestring')
+  // console.log(ordered_linestring)
 
 }
 
 function get_nearest_line(index_arr, end_coords, coordinates_array){
   
   distance_object = new Object()
+  
 
   for (var i = 0; i < coordinates_array.length; i++) {
     if(index_arr != i){
       var start_coordinates = coordinates_array[i][0]
-
+      if(end_coords.length == 1){
+        end_coords = end_coords[0]
+      }
       var from = turf.point(end_coords);
       var to = turf.point(start_coordinates);
       var options = {units: 'kilometers'};
 
       var distance = turf.distance(from, to, options);
 
-      distance_object[i] = distance
+      if(distance != 0){
+        distance_object[i] = distance
+      }
     }
     
   }
@@ -455,7 +447,6 @@ function get_nearest_line(index_arr, end_coords, coordinates_array){
       min_index = distance
     }
   }
-
   return min_index
 }
 
@@ -924,4 +915,27 @@ function find_duplicates(inputArray){
   }
 
   return [duplicate, coord];
+}
+
+
+function remove_start_end(lineString){
+  var first_coords = lineString.geometry.coordinates[0]
+  var last_coords = lineString.geometry.coordinates[lineString.geometry.coordinates.length -1]
+  if (first_coords[0] == last_coords[0] && first_coords[1] == last_coords[1]) {
+    lineString.geometry.coordinates.pop()
+  }  
+
+  return lineString;
+}
+
+function remove_start_end_arr(arr_intersection){
+  if(arr_intersection > 2){
+    console.log(arr_intersection)
+    var first_coords = arr_intersection[0]
+    var last_coords = arr_intersection[arr_intersection.length -1]
+    if (first_coords[0] == last_coords[0] && first_coords[1] == last_coords[1]) {
+      arr_intersection.pop()
+    }  
+  }
+  return arr_intersection;
 }
