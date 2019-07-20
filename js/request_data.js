@@ -373,9 +373,14 @@ function concatenate_linestrings(feature_array){
       if(feature_array[feature].hasOwnProperty('geometry')){
         console.log(feature_array[feature])
         coordinates_array.push(feature_array[feature].geometry.coordinates)
+        var ordered_linestring = turf.lineString(feature_array[feature].geometry.coordinates)
+        display_feature(ordered_linestring)
       }else{
-        console.log(feature_array[feature])
-        coordinates_array.push(feature_array[feature])
+        //single points -> excluded for now
+        // console.log(feature_array[feature][0])
+        // coordinates_array.push(feature_array[feature])
+        // var ordered_linestring = turf.point(feature_array[feature][0])
+        // display_feature(ordered_linestring)
       }
     }
   }
@@ -397,57 +402,92 @@ function concatenate_linestrings(feature_array){
       var end_coords = coordinates_array[counter]
     }
 
-    min_index = get_nearest_line(counter, end_coords, coords_arr_to_compare)
+    nearest_data = get_nearest_line(counter, end_coords, coords_arr_to_compare)
+
+    min_index = nearest_data.min_index
+    to_reverse = nearest_data.to_reverse
 
     counter = min_index
-    reconstructed_array.push(coordinates_array[min_index]) //.reverse()
+    
+    if(!to_reverse){
+      coord_arr = coordinates_array[min_index].reverse()
+    }else{
+      coord_arr = coordinates_array[min_index]
+    }
+
+    reconstructed_array.push(coord_arr) //.reverse()
   }
 
-  // console.log('reconstructed')
-  // console.log(reconstructed_array)
 
-  var ordered = reconstructed_array.flat();
-  var ordered_linestring = turf.lineString(ordered)
-  display_feature(ordered_linestring)
-  // console.log('linestring')
-  // console.log(ordered_linestring)
+  // var ordered = reconstructed_array.flat();
+  // var ordered_linestring = turf.lineString(ordered)
+  // display_feature(ordered_linestring)
 
 }
 
 function get_nearest_line(index_arr, end_coords, coordinates_array){
   
-  distance_object = new Object()
+  distance_object_to_start = new Object()
+  distance_object_to_end = new Object()
   
 
-  for (var i = 0; i < coordinates_array.length; i++) {
+  for (var i = 1; i < coordinates_array.length; i++) {
     if(index_arr != i){
       var start_coordinates = coordinates_array[i][0]
+      var end_coordinates = coordinates_array[i][coordinates_array[i].length - 1]
+
       if(end_coords.length == 1){
         end_coords = end_coords[0]
       }
       var from = turf.point(end_coords);
-      var to = turf.point(start_coordinates);
+      var to_start = turf.point(start_coordinates);
+      var to_end = turf.point(end_coordinates);
       var options = {units: 'kilometers'};
 
-      var distance = turf.distance(from, to, options);
+      var distance_to_start = turf.distance(from, to_start, options);
+      var distance_to_end = turf.distance(from, to_end, options);
 
-      if(distance != 0){
-        distance_object[i] = distance
+      if(distance_to_start != 0){
+        distance_object_to_start[i] = distance_to_start
       }
+
+      if(distance_to_end != 0){
+        distance_object_to_end[i] = distance_to_end
+      }
+
     }
     
   }
 
-  min_distance_index = Infinity
-  min_index = 0
+  min_distance_index_to_start = Infinity
+  min_index_to_start = 0
 
-  for(distance in distance_object){
-    if(distance_object[distance] < min_distance_index){
-      min_distance_index = distance_object[distance]
-      min_index = distance
+  for(distance in distance_object_to_start){
+    if(distance_object_to_start[distance] < min_distance_index_to_start){
+      min_distance_index_to_start = distance_object_to_start[distance]
+      min_index_to_start = distance
     }
   }
-  return min_index
+
+  min_distance_index_to_end = Infinity
+  min_index_to_end = 0
+
+  for(distance in distance_object_to_end){
+    if(distance_object_to_end[distance] < min_distance_index_to_end){
+      min_distance_index_to_end = distance_object_to_end[distance]
+      min_index_to_end = distance
+    }
+  }
+
+  if(min_distance_index_to_start < min_distance_index_to_end){
+    min_index = min_index_to_start
+    to_reverse = false
+  }else{
+    min_index = min_index_to_end
+    to_reverse = true
+  }
+
+  return {min_index: min_index, reverse:to_reverse}
 }
 
 function display_feature(feature_data){
