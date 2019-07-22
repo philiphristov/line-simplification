@@ -121,12 +121,17 @@ function find_intersections(polygon1, pol1_id, polygon2, pol2_id){
   var pol1_coord = parseGeoDataArray(polygon1)
   var pol2_coord = parseGeoDataArray(polygon2)
 
-  try{
+  
 
     var pol1 = turf.polygon(pol1_coord)
     var pol2 = turf.polygon(pol2_coord)
 
+  try{
     var intersection = turf.intersect(pol1, pol2);
+
+
+
+    
 
     if(intersection){
 
@@ -166,9 +171,13 @@ function find_intersections(polygon1, pol1_id, polygon2, pol2_id){
       
     }
 
-  }catch(e){
+    }catch(e){
     console.log(e)
+    console.log(pol1_id)
+    console.log(pol2_id)
   }
+
+  
 }
 
 function rebuild_polygons(){
@@ -365,48 +374,54 @@ function point_on_line(lat, lng, line){
 
 function concatenate_linestrings(feature_array){
   var coordinates_array = new Array()
-  
-  console.log(feature_array)
+  var lines_array = new Array()
   for (feature in feature_array){
-    console.log(feature_array[feature])
     if(feature_array.hasOwnProperty(feature)){
       if(feature_array[feature].hasOwnProperty('geometry')){
-        console.log(feature_array[feature])
         coordinates_array.push(feature_array[feature].geometry.coordinates)
         var ordered_linestring = turf.lineString(feature_array[feature].geometry.coordinates)
         display_feature(ordered_linestring)
+      if(feature_array[feature].geometry.coordinates.length >= 4){
+        lines_array.push(feature_array[feature])
+      }
       }else{
-        //single points -> excluded for now
-        // console.log(feature_array[feature][0])
-        // coordinates_array.push(feature_array[feature])
-        // var ordered_linestring = turf.point(feature_array[feature][0])
+        // single points -> excluded for now
+        coordinates_array.push(feature_array[feature])
+        var ordered_linestring = turf.point(feature_array[feature][0])
         // display_feature(ordered_linestring)
       }
     }
   }
 
-  // console.log('unordered')
-  // console.log(coordinates_array)
-
   var reconstructed_array = new Array()
   reconstructed_array.push(coordinates_array[0])
   var coords_arr_to_compare = coordinates_array
 
-  counter = 1
-  while(reconstructed_array.length < coordinates_array.length){
-    var start_coords = coordinates_array[counter][0]
+  counter = "0"
+  last_index = []
+  to_reverse = false
 
-    if(coordinates_array[counter].length >= 2){
-      var end_coords = coordinates_array[counter][coordinates_array[counter].length - 1]
+  while(reconstructed_array.length < coordinates_array.length){
+    if(to_reverse){
+      current_line = coordinates_array[counter].reverse()
     }else{
-      var end_coords = coordinates_array[counter]
+      current_line = coordinates_array[counter]
     }
 
-    nearest_data = get_nearest_line(counter, end_coords, coords_arr_to_compare)
+    var start_coords = current_line[0]
+
+    if(current_line.length >= 2){
+      var end_coords = current_line[current_line.length - 1]
+    }else{
+      var end_coords = current_line
+    }
+
+    nearest_data = get_nearest_line(counter, last_index, end_coords, coords_arr_to_compare)
 
     min_index = nearest_data.min_index
     to_reverse = nearest_data.to_reverse
 
+    last_index.push(counter)
     counter = min_index
     
     if(!to_reverse){
@@ -417,22 +432,57 @@ function concatenate_linestrings(feature_array){
 
     reconstructed_array.push(coord_arr) //.reverse()
   }
+  
+  
+
+  // feature_collection = turf.featureCollection(lines_array)
+  // console.log(lines_array)
+  // poligonized_lines = turf.polygonize(feature_collection)
+  // console.log(poligonized_lines)
+  // display_feature(poligonized_lines)
 
 
-  // var ordered = reconstructed_array.flat();
-  // var ordered_linestring = turf.lineString(ordered)
+  var ordered = reconstructed_array.flat();
+  var split_index = ordered.getDuplicates()
+
+  var split1 = ordered.slice(0,split_index).reverse()
+  var split2 = ordered.slice(split_index,ordered.length-1).reverse()
+  var concatenated = split1.concat(split2)
+  var ordered_linestring = turf.lineString(concatenated)
+
   // display_feature(ordered_linestring)
+
+  // reconstructed_array.map( function(feature){
+  //   if(feature.length >= 2){
+  //     display_feature(turf.lineString(feature))
+  //   }
+  // })
 
 }
 
-function get_nearest_line(index_arr, end_coords, coordinates_array){
+Array.prototype.getDuplicates = function () {
+    var duplicate_index = 0;
+    for (var i = 0; i < this.length; i++) {
+        for (var y = 0; y < this.length; y++) {
+          if(i != y){
+            if(this[i][0] == this[y][0] && this[i][1] == this[y][1]){
+              duplicate_index = i
+            }
+          }
+        }
+    }
+
+    return duplicate_index;
+};
+
+function get_nearest_line(index_arr, last_index,  end_coords, coordinates_array){
   
   distance_object_to_start = new Object()
   distance_object_to_end = new Object()
   
 
-  for (var i = 1; i < coordinates_array.length; i++) {
-    if(index_arr != i){
+  for (var i = 0; i < coordinates_array.length; i++) {
+    if(index_arr != i && last_index.indexOf(i.toString()) == -1 ){
       var start_coordinates = coordinates_array[i][0]
       var end_coordinates = coordinates_array[i][coordinates_array[i].length - 1]
 
@@ -489,6 +539,7 @@ function get_nearest_line(index_arr, end_coords, coordinates_array){
 
   return {min_index: min_index, reverse:to_reverse}
 }
+
 
 function display_feature(feature_data){
   map.data.addGeoJson(feature_data);
