@@ -7,7 +7,7 @@ function line_simplification_menu(){
         <span> Location Category: <input id="location_category" value="" /></span><br>
         <span> Epsilon Value: <input id="epsilon_factor" value="0.0019" /></span><br>
         <span> Specific Location id: <input id="specific_location_id"  /></span><br>
-        <span> Specific Location Hierarchy id: <input id="specific_location_hierarchy_id" value="180986"/></span><br>
+        <span> Specific Location Hierarchy id: <input id="specific_location_hierarchy_id" value="180992"/></span><br> <!-- 180986 180992 -->
         <button id="simplify_polygons">Simplify and Save</button><br>
 
         <button id="display_simplified_polygons">Display simplied polygons </button><br>
