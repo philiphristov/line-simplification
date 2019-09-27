@@ -413,8 +413,7 @@ function linestrings_to_polygon(feature_array){
   ordered_linestrings = get_ordered_coords_array(feature_array)
 
   try{
-    var line = turf.polygon([ordered_linestrings])
-    console.log(line)
+    var polygon = turf.polygon([ordered_linestrings])
     // feature_collection = turf.lineToPolygon([feature_collection])
     // var polygon = turf.polygonize(feature_collection)
     // display_feature(feature_collection, "red")
@@ -422,18 +421,25 @@ function linestrings_to_polygon(feature_array){
     // feature_collection = turf.featureCollection(feature_collection)
     // var polygon = turf.polygonize(feature_collection)
     // var polygon = turf.polygon([ordered_linestrings.flat()])
-    display_feature(line, "red")
+    display_feature(polygon, "red")
 
   }catch(e){
     console.log(e)
-    var split_index = start_end_index(ordered_linestrings)
-    // console.log(split_index)
-    var p1 = ordered_linestrings.slice(0,split_index);
-    var p2 = ordered_linestrings.slice(split_index);
-    var line = turf.lineString([p1.reverse(), p2.reverse()].flat())
-    line = turf.cleanCoords(line)
+    // TRYING TO REARANGE
+    // var split_index = start_end_index(ordered_linestrings)
+    // var line = turf.cleanCoords(turf.lineString(ordered_linestrings)).geometry.coordinates
+
+    // var p1 = line.slice(0,split_index);
+    // var p2 = line.slice(split_index);
+
+    // var poly = [p1.reverse(), p2.reverse()].flat()
+    // var polygon = turf.polygon(poly)
+    // display_feature(polygon, "red")
+
+    var line = turf.lineString(ordered_linestrings)
     display_feature(line, "red")
 
+    // OLD 
     // ordered_linestrings = get_ordered_coords_array(ordered_linestrings)
     // var feature_collection = ordered_linestrings.map(line => turf.lineString(line))
     // feature_collection = turf.featureCollection(feature_collection)
@@ -447,7 +453,8 @@ function linestrings_to_polygon(feature_array){
 
 function start_end_index(line){
 
-  var index = 0
+  var index_1 = 0
+  var index_2 = 0
 
   line.forEach(function(coord_1, index_1){
 
@@ -456,14 +463,15 @@ function start_end_index(line){
 
         if(coord_1[0] == coord_2[0] && coord_1[1] == coord_2[1]){
           console.log("STARTEND!!!!!!!!!!!!!!!!!!!!!")
-          index =  index_1
+          index_1 =  index_1
+          index_2 =  index_2
 
         }
       }
     })
     
   })
-  return index
+  return [index_1, index_2]
 }
 
 function get_ordered_coords_array(feature_array){
