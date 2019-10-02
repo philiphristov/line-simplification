@@ -216,6 +216,7 @@ function new_simplify_and_perserve(multipolygon, intersections){
   for (intersection in intersections){
     if(intersections.hasOwnProperty(intersection)){
       var multilinestring = []
+      var linestrings_array = []
 
       if(intersections[intersection].geometry.coordinates){
 
@@ -223,34 +224,50 @@ function new_simplify_and_perserve(multipolygon, intersections){
 
         switch(intersections[intersection].geometry.type){
           case "Point":
-            // multilinestring = multilinestring.concat(intersections[intersection].geometry.coordinates)
+            multilinestring.push(intersections[intersection].geometry.coordinates)
+            linestrings_array.push(multilinestring)
             break
           case "LineString":
             intersections[intersection].geometry.coordinates.forEach(function(coord){
               multilinestring.push(coord)
             })
+            linestrings_array.push(multilinestring)
           break
           case "MultiLineString":
             intersections[intersection].geometry.coordinates.forEach(function(coord){
               multilinestring = multilinestring.concat(coord)
             })
+            linestrings_array.push(multilinestring)
           break
+          default:
+            // console.log("DEFAULT")
+            // console.log(element.coordinates)
         }
       }else{
-
+        
         intersections[intersection].geometry.geometries.forEach(function(element){
           switch(element.type){
             case "LineString":
-              multilinestring = multilinestring.concat(element.coordinates)
+              // multilinestring = multilinestring.concat(element.coordinates)
+              linestrings_array = [linestrings_array.concat(element.coordinates)]
             break
             case "MultiLineString":
               intersections[intersection].geometry.coordinates.forEach(function(coord){
-                multilinestring = multilinestring.concat(coord)
+                multilinestring = multilinestring.concat(coord.flat())
+                // multilinestring.push(coord)
               })
+
+              linestrings_array.push(multilinestring)
+
             break
             case "Point":
               // multilinestring.push(element.coordinates)
+
+              linestrings_array.push(element.coordinates)
             break
+            default:
+            // console.log("DEFAULT")
+            // console.log(element.coordinates)
           }
         })
         
@@ -258,9 +275,9 @@ function new_simplify_and_perserve(multipolygon, intersections){
 
 
       if(intersections_arr.hasOwnProperty(intersection)){
-        intersections_arr[intersection] = intersections_arr[intersection].concat(multilinestring);
+        intersections_arr[intersection] = intersections_arr[intersection].push(linestrings_array); // concat
       }else{
-        intersections_arr[intersection] = multilinestring;
+        intersections_arr[intersection] = linestrings_array;
       }
 
       // multilinestring = intersections[intersection].geometry.coordinates
@@ -320,17 +337,14 @@ function new_simplify_and_perserve(multipolygon, intersections){
           
           var current_line = line_coordinates[line];
 
-          if(false){ // current_line.length > 10
-            var simplify_ = simplify(current_line, 0.0003, true)
+          if(true){ // current_line.length > 10
+            var simplify_ = simplify(current_line, 0.0001, true)
           }else{
             var simplify_ = current_line
           }
           
-          // var line_string = turf.lineString(current_line)
           var line_string = turf.lineString(simplify_)
           
-          // display_feature(line_string)
-
           reconstructed_polygon.push(line_string);
         }else{
           var current_line = line_coordinates[line];
@@ -344,8 +358,8 @@ function new_simplify_and_perserve(multipolygon, intersections){
   for (intersection in intersections_arr){
     if(intersections_arr.hasOwnProperty(intersection)){
 
-      if(false){ // intersections_arr[intersection].length > 10
-        var simplify_ = simplify(intersections_arr[intersection], 0.0003, true)
+      if(true){ //  intersections_arr[intersection].length > 10
+        var simplify_ = simplify(intersections_arr[intersection], 0.0001, true)
       }else{
         var simplify_ = intersections_arr[intersection]
       }
@@ -353,12 +367,10 @@ function new_simplify_and_perserve(multipolygon, intersections){
       if(simplify_.length >= 2){
         try{
           var line_string = turf.lineString(simplify_)
-          // display_feature(line_string)
           reconstructed_polygon.push(line_string);  
         }catch(e){
           console.log(simplify_)
-          var line_string = turf.lineString([simplify_,simplify_])
-          // display_feature(line_string)
+          var line_string = turf.lineString(simplify_)
           reconstructed_polygon.push(line_string); 
         }
               
@@ -604,7 +616,11 @@ function point_on_line(lat, lng, line){
 
 function linestrings_to_polygon(feature_array){
   coordinates_array = feature_array.map(feature => feature.geometry.coordinates)
+  // console.log("unordered")
+  // console.log(coordinates_array)
   ordered_linestrings = get_ordered_coords_array(coordinates_array)
+  // console.log("ordered")
+  // console.log(ordered_linestrings)
 
   var first_point = ordered_linestrings[0]
   var last_point = ordered_linestrings[ordered_linestrings.length - 1]
