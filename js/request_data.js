@@ -207,7 +207,7 @@ function new_simplify_and_perserve(multipolygon, intersections){
 
   var reconstructed_polygon = new Array();
   var intersections_arr = new Object()
-  var options = {tolerance:  0.0006, highQuality: true, mutate: true};
+  var options = {tolerance: 0.01, highQuality: true};
   var multiline_coordinates = new Array();
 
   // console.log(intersections)
@@ -258,7 +258,6 @@ function new_simplify_and_perserve(multipolygon, intersections){
               })
 
               linestrings_array.push(multilinestring)
-
             break
             case "Point":
               // multilinestring.push(element.coordinates)
@@ -273,48 +272,11 @@ function new_simplify_and_perserve(multipolygon, intersections){
         
       }
 
-
       if(intersections_arr.hasOwnProperty(intersection)){
         intersections_arr[intersection] = intersections_arr[intersection].push(linestrings_array); // concat
       }else{
         intersections_arr[intersection] = linestrings_array;
       }
-
-      // multilinestring = intersections[intersection].geometry.coordinates
-
-      // for(var i=0; i < multilinestring.length; i++){
-      //   if(multilinestring.length > 2){
-      //     var coords = multilinestring[i][0]
-      //   }else{
-      //     var coords = multilinestring[i]
-      //     if(!isNaN(multilinestring[i])){
-      //       coords = [multilinestring[0], multilinestring[1]]
-      //     }
-      //   }
-
-      //   if(intersections_arr.hasOwnProperty(intersection)){
-      //     intersections_arr[intersection].push([coords[0], coords[1]]);
-      //   }else{
-      //     arr = new Array();
-      //     arr.push([coords[0], coords[1]]);
-      //     intersections_arr[intersection] = arr;
-      //   }
-      // }
-      
-
-      // if(multilinestring.length > 2){
-
-      //   var last_coords = multilinestring[multilinestring.length - 1][1]
-
-      //   if(intersections_arr.hasOwnProperty(intersection)){
-      //     intersections_arr[intersection].push([last_coords[0], last_coords[1]]);
-      //   }else{
-      //     arr = new Array();
-      //     arr.push([last_coords[0], last_coords[1]]);
-      //     intersections_arr[intersection] = arr;
-      //   }
-
-      // }
 
     }
   }
@@ -323,7 +285,6 @@ function new_simplify_and_perserve(multipolygon, intersections){
 
   // compute outer linestrings of each polygon by substracting intersections from all polygon coodinates
   var multiline_coordinates = construct_outer_lines(multipolygon, intersections_arr);
-  // var multiline_coordinates = construct_outer_lines_test(multipolygon, intersections_arr);
 
   print_first_last_coords(multiline_coordinates, "outer")
 
@@ -343,7 +304,7 @@ function new_simplify_and_perserve(multipolygon, intersections){
             var simplify_ = current_line
           }
           
-          var line_string = turf.lineString(simplify_)
+          var line_string = turf.lineString(simplify_, options)
           
           reconstructed_polygon.push(line_string);
         }else{
@@ -366,11 +327,11 @@ function new_simplify_and_perserve(multipolygon, intersections){
 
       if(simplify_.length >= 2){
         try{
-          var line_string = turf.lineString(simplify_)
+          var line_string = turf.lineString(simplify_, options)
           reconstructed_polygon.push(line_string);  
         }catch(e){
           console.log(simplify_)
-          var line_string = turf.lineString(simplify_)
+          var line_string = turf.lineString(simplify_, options)
           reconstructed_polygon.push(line_string); 
         }
               
@@ -417,35 +378,6 @@ function print_first_last_coords(array, polygon_part){
       }
       break
   }
-
-  // for(element in array){
-  //   if(array.hasOwnProperty(element)){
-  //     if( array[element] instanceof Object ){
-  //       console.log("FIRST AND LAST INTERSECTION")
-  //       console.log(array[element][0])
-  //       console.log(array[element][array[element].length - 1])
-  //     }else{
-  //       console.log("FIRST AND LAST OUTER")
-  //       console.log(array[0])
-  //       console.log(array[array.length - 1])
-  //     }
-  //   }
-  // }
-
-  
-  // if( array instanceof Object ){
-  //   for(element in array){
-  //     if(array.hasOwnProperty(element)){
-  //       console.log("FIRST AND LAST INTERSECTION")
-  //       console.log(array[element][0])
-  //       console.log(array[element][array[element].length - 1])
-  //     }
-  //   }
-  // }else{
-  //   console.log("FIRST AND LAST OUTER")
-  //   console.log(array[0])
-  //   console.log(array[array.length - 1])
-  // }
   
 }
 
@@ -622,9 +554,8 @@ function linestrings_to_polygon(feature_array){
   // console.log("ordered")
   // console.log(ordered_linestrings)
 
-  var first_point = ordered_linestrings[0]
-  var last_point = ordered_linestrings[ordered_linestrings.length - 1]
-
+  // var first_point = ordered_linestrings[0]
+  // var last_point = ordered_linestrings[ordered_linestrings.length - 1]
   // if(first_point[0] != last_point[0]){
   //     ordered_linestrings.push(first_point)
   // }
