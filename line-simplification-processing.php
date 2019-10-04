@@ -192,3 +192,21 @@ function save_to_database(){
 	echo json_encode("saved");
 	wp_die();
 }
+
+add_action('wp_ajax_nopriv_get_all_hierarchies', 'get_all_hierarchies');
+add_action('wp_ajax_get_all_hierarchies', 'get_all_hierarchies');
+function get_all_hierarchies(){
+	global $db_obj;
+
+	$hierarchy_ids = [];
+
+	$location_data = $db_obj->get_results("SELECT DISTINCT Id_Ueberort FROM orte_hierarchien");
+
+	foreach ($location_data as $value) {
+		array_push($hierarchy_ids, $value->Id_Ueberort);
+	}
+		
+
+	echo json_encode($hierarchy_ids);
+	wp_die();
+}
