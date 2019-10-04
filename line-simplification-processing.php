@@ -32,18 +32,25 @@ add_action('wp_ajax_get_simpl_polygon_data', 'get_simpl_polygon_data');
 function get_simpl_polygon_data(){
 	global $db_obj;
 
-	$polygon_category = $_POST['polygon_category'];
-	$epsilon = $_POST['epsilon'];
-	$specific_location = $_POST['specific_location'];
-	$specific_location_hierarchy_id = $_POST['specific_location_hierarchy_id'];
+	$polygon_category = $_REQUEST['polygon_category'];
+	$epsilon = $_REQUEST['epsilon'];
+	$specific_location = $_REQUEST['specific_location'];
+	$specific_location_hierarchy_id = $_REQUEST['specific_location_hierarchy_id'];
+
+	$all_simplified_polygons = $_REQUEST['all_simplified_polygons'];
 
 	error_log('Epsilon: ' . $epsilon);
 	error_log('Hierarchie: ' . $specific_location_hierarchy_id);
 	error_log('Cat: ' . $polygon_category);
 	error_log('Specific: ' . $specific_location);
+	error_log('ALL SIMPLIFIED: ' . $all_simplified_polygons);
 	
-
-	if(strcmp($specific_location_hierarchy_id, "") != 0){
+	if(filter_var($all_simplified_polygons, FILTER_VALIDATE_BOOLEAN)){
+		error_log('ALL Simplified');
+		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
+		FROM polygone_vereinfacht
+		WHERE  polygone_vereinfacht.Epsilon = $epsilon");
+	}else if(strcmp($specific_location_hierarchy_id, "") != 0){
 		error_log('Hierarchie');
 		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
 		FROM polygone_vereinfacht, orte, orte_hierarchien
@@ -179,14 +186,27 @@ function save_to_database(){
 	global $db_obj;
 
 	//INSERT INTO polygone_vereinfacht (Id_Ort, Geodaten,Epsilon) VALUES ($loc_id, ST_GeomFromText($location_data),$epsilon)
-	$id_data = $_REQUEST["id_data"];
-	$location_data = (string) stripcslashes((string)$_REQUEST["location_data"]);
-	//$location_data = ($_REQUEST["location_data"]);
-	$epsilon = $_REQUEST["epsilon"];
+	// $id_data = $_REQUEST["id_data"];
+	// $location_data = (string) stripcslashes((string)$_REQUEST["location_data"]);
+	// $epsilon = $_REQUEST["epsilon"];
 
-	$sql = ("INSERT INTO `polygone_vereinfacht` (`Id_Ort`, `Geodaten`, `Epsilon`, `Mittelpunkt`) values ($id_data, ST_GeomFromText('".$location_data."'), $epsilon, ST_Centroid(ST_GeomFromText('".$location_data."')))");
+	$geo_data_array = json_decode(stripslashes($_REQUEST["geo_data_to_save"]), true)['locations_data'];
 
-	$db_obj->query($sql);
+	for ($i=0; $i < count($geo_data_array) ; $i++) { 
+		$geo_data = $geo_data_array[$i];
+
+		$id_data 	   = $geo_data["id"];
+		$location_data = $geo_data["location_data"];
+		$epsilon  	   = $geo_data["epsilon"];
+
+		$sql = ("INSERT INTO `polygone_vereinfacht` (`Id_Ort`, `Geodaten`, `Epsilon`, `Mittelpunkt`) values ($id_data, ST_GeomFromText('".$location_data."'), $epsilon, ST_Centroid(ST_GeomFromText('".$location_data."')))");
+
+		$db_obj->query($sql);
+	}
+
+	
+
+	
 
 
 	echo json_encode("saved");

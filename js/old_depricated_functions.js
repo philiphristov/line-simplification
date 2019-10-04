@@ -1,3 +1,10 @@
+var simplified_data;
+var csv = "Id_Geo,GeoData\n";
+var id_last;
+var next_index;
+var error;
+var check_index;
+
 function check_point_on_intersection(lat,lng, intersections){
   var coords = new Array();
   var pt = turf.point([lat, lng]);
