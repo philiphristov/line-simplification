@@ -126,7 +126,19 @@ function rebuild_polygons(){
       var polygon = polygons_to_simplify[pol_id].polygon;
       polygons_to_simplify[pol_id]['simplified'] = new_simplify_and_perserve(polygon, intersections);
 
-      // display_feature(polygon, "red")
+      if(polygons_to_simplify[pol_id]['simplified']){
+        console.log("original length: " + polygon.geometry.coordinates[0].length)
+        console.log("simplified length: " + polygons_to_simplify[pol_id]['simplified'].length)
+        console.log("")
+      }else{
+        polygons_to_simplify[pol_id]['simplified'] = polygon.geometry.coordinates[0]
+        console.log("not simplified!!!!!!!!")
+        console.log("original length: " + polygon.geometry.coordinates[0].length)
+        console.log("simplified length: " + polygons_to_simplify[pol_id]['simplified'].length)
+        console.log("")
+      }
+      var polygon = turf.polygon([polygons_to_simplify[pol_id]['simplified']])
+      display_feature(polygon, "red")
     }
   }
 }
@@ -226,8 +238,6 @@ function new_simplify_and_perserve(multipolygon, intersections){
         var multilinestring = []
         var linestrings_array = []
 
-        console.log(current_intersection_feature)
-
         if(current_intersection_feature.geometry.coordinates){
 
 
@@ -302,12 +312,12 @@ function new_simplify_and_perserve(multipolygon, intersections){
     }
   }
 
-  print_first_last_coords(intersections_arr, "intersections")
+  // print_first_last_coords(intersections_arr, "intersections")
 
   // compute outer linestrings of each polygon by substracting intersections from all polygon coodinates
   var multiline_coordinates = construct_outer_lines(multipolygon, intersections_arr);
-  // var multiline_coordinates = []
-  print_first_last_coords(multiline_coordinates, "outer")
+
+  // print_first_last_coords(multiline_coordinates, "outer")
 
   // simplify and display outer poligon linestrings
   for (var i = 0; i <  multiline_coordinates.length; i++) {
@@ -321,8 +331,8 @@ function new_simplify_and_perserve(multipolygon, intersections){
           
           var current_line = line_coordinates[line];
 
-          if(true){ // current_line.length > 10
-            var simplify_ = simplify(current_line, 0.0006, true)
+          if(true){ //  current_line.length > 10
+            var simplify_ = simplify(current_line, 0.0009, true)
           }else{
             var simplify_ = current_line
           }
@@ -343,24 +353,19 @@ function new_simplify_and_perserve(multipolygon, intersections){
     if(intersections_arr.hasOwnProperty(intersection)){
       if(Array.isArray(intersections_arr[intersection]) && intersections_arr[intersection].length > 0){
         
-        // console.log(intersections_arr[intersection])
-
-        if(true){ //  intersections_arr[intersection].length > 10
-          var simplify_ = simplify(intersections_arr[intersection], 0.0006, true)
+        if(true){ //   intersections_arr[intersection][0].length > 10
+          var simplify_ = simplify(intersections_arr[intersection][0], 0.0009, true)
         }else{
           var simplify_ = intersections_arr[intersection]
         }
 
-        simplify_ = simplify_[0]
-
-        // var line_string = turf.lineString(simplify_)
-        // reconstructed_polygon.push(line_string);  
         if(simplify_){
           if(simplify_.length >= 2){
             try{
               var line_string = turf.lineString(simplify_)
               reconstructed_polygon.push(line_string);  
             }catch(e){
+              console.log(e)
               var line_string = turf.lineString([simplify_,simplify_])
               reconstructed_polygon.push(line_string); 
             } 
@@ -375,9 +380,8 @@ function new_simplify_and_perserve(multipolygon, intersections){
 
   reconstructed_polygon = reconstructed_polygon.filter(el => el.hasOwnProperty('geometry') )
 
-  linestrings_to_polygon(reconstructed_polygon);
+  reconstructed_polygon = linestrings_to_polygon(reconstructed_polygon);
 
-  collection = []
   return reconstructed_polygon;
 }
 
@@ -456,9 +460,6 @@ for (var p = 0; p < multipolygon.length; p++) {
           try{
             var isPointOnLine = turf.booleanPointOnLine(pt, turf.lineString(current_intersection)) // booleanPointOnLine
           }catch(e){
-            // console.log("ERROR")
-            // console.log(e)
-            // console.log(current_intersection)
 
             try{
               var isPointOnLine = turf.booleanPointOnLine(pt, turf.lineString(current_intersection.flat()))
@@ -550,7 +551,9 @@ function point_on_line(lat, lng, line){
 }
 
 function linestrings_to_polygon(feature_array){
-  console.log(feature_array)
+
+  // console.log(feature_array.length)
+
   coordinates_array = feature_array.map(feature => feature.geometry.coordinates)
 
   // coordinates_array = feature_array.forEach(function(feature){
@@ -563,8 +566,6 @@ function linestrings_to_polygon(feature_array){
   if(Array.isArray(coordinates_array) && coordinates_array.length > 0){
     ordered_linestrings = get_ordered_coords_array(coordinates_array)
 
-    console.log(ordered_linestrings)
-
     // var first_point = ordered_linestrings[0]
     // var last_point = ordered_linestrings[ordered_linestrings.length - 1]
     // if(first_point[0] != last_point[0]){
@@ -573,18 +574,29 @@ function linestrings_to_polygon(feature_array){
 
     try{
       var polygon = turf.polygon([ordered_linestrings])
-      display_feature(polygon, "red")
+      // display_feature(polygon, "red")
 
     }catch(e){
       // console.log("Error")
-
-      var line = turf.lineString(ordered_linestrings)
-      display_feature(line, "red")
+      try{
+        var first_point = ordered_linestrings[0]
+        var last_point = ordered_linestrings[ordered_linestrings.length - 1]
+        if(first_point[0] != last_point[0]){
+            ordered_linestrings.push(first_point)
+        }
+        var polygon = turf.polygon([ordered_linestrings])
+        // display_feature(polygon, "red")
+      }catch(e){
+        console.log(ordered_linestrings)
+        // var line = turf.lineString(ordered_linestrings)
+        // display_feature(line, "red")
+        ordered_linestrings = null
+      }
 
     }
   }
 
-
+  return ordered_linestrings
 }
 
 
