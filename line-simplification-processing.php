@@ -50,11 +50,11 @@ function get_simpl_polygon_data(){
 		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
 		FROM polygone_vereinfacht
 		WHERE  polygone_vereinfacht.Epsilon = $epsilon");
-	}else if(strcmp($specific_location_hierarchy_id, "") != 0){
+	}else if(count($specific_location_hierarchy_id) != 0){
 		error_log('Hierarchie');
 		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
 		FROM polygone_vereinfacht, orte, orte_hierarchien
-		WHERE polygone_vereinfacht.Id_Ort = orte.Id_Ort AND orte_hierarchien.Id_Ueberort = $specific_location_hierarchy_id  AND orte.Id_Ort = orte_hierarchien.Id_Ort AND polygone_vereinfacht.Epsilon = $epsilon");
+		WHERE polygone_vereinfacht.Id_Ort = orte.Id_Ort AND orte_hierarchien.Id_Ueberort in ( " . implode(", ", $specific_location_hierarchy_id) . " )" . " AND orte.Id_Ort = orte_hierarchien.Id_Ort AND polygone_vereinfacht.Epsilon = $epsilon");
 	}else if(strcmp($polygon_category, "") != 0){
 		error_log('Category');
 		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
@@ -130,8 +130,8 @@ function get_hierarchy_polygons(){
 	if(strcmp($loc_id, "") != 0){
 		$loc_id = $_REQUEST["specific_location"];
 		$location_data = $db_obj->get_results("SELECT Id_Ort, ST_AsText(orte.Geodaten)  as coordinates FROM orte WHERE Id_Ort = $loc_id");
-	}else if(strcmp($specific_location_hierarchy, "") != 0){
-		$location_data = $db_obj->get_results("SELECT o.Id_Ort, ST_AsText(o.Geodaten) as coordinates FROM orte o join orte_hierarchien o_h on o.Id_Ort = o_h.Id_Ort WHERE Id_Ueberort = $specific_location_hierarchy");
+	}else if(count($specific_location_hierarchy) != 0){
+		$location_data = $db_obj->get_results("SELECT o.Id_Ort, ST_AsText(o.Geodaten) as coordinates FROM orte o join orte_hierarchien o_h on o.Id_Ort = o_h.Id_Ort WHERE Id_Ueberort in ( " . implode(", ", $specific_location_hierarchy) . " )");
 	}else{
 		$location_data = $db_obj->get_results("SELECT Id_Ort, ST_AsText(orte.Geodaten) as coordinates FROM orte WHERE Id_Kategorie = $polygon_category");
 	}

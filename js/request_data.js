@@ -12,7 +12,7 @@ jQuery(document).ready(function(){
     polygon_category               = jQuery("#location_category").val();
     epsilon_value                  = jQuery("#epsilon_factor").val();
     specific_location              = jQuery("#specific_location_id").val();
-    specific_location_hierarchy_id = jQuery("#specific_location_hierarchy_id").val();
+    specific_location_hierarchy_id = jQuery("#specific_location_hierarchy_id").val().split(',');
     all_locations                  = jQuery("#all_locations").is(":checked")
 
     console.log(epsilon_value + ",   " +  specific_location_hierarchy_id);
@@ -52,7 +52,7 @@ jQuery(document).ready(function(){
       get_all_hierarchies(callback)
 
     }else if((polygon_category || specific_location || specific_location_hierarchy) && epsilon_value ){
-      parse_hierarchy_polygons(polygon_category,epsilon_value,specific_location,specific_location_hierarchy);
+      parse_hierarchy_polygons(polygon_category,epsilon_value,specific_location,specific_location_hierarchy.split(","));
     }else{
       jQuery("#location_category").val("");
       jQuery("#epsilon_factor").val("");
