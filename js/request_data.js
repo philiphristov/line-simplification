@@ -15,19 +15,17 @@ jQuery(document).ready(function(){
     specific_location_hierarchy_id = jQuery("#specific_location_hierarchy_id").val().split(',');
     all_locations                  = jQuery("#all_locations").is(":checked")
 
-    console.log(epsilon_value + ",   " +  specific_location_hierarchy_id);
-
     if(all_locations){
       request_and_display_gemeinden("", epsilon_value,"", specific_location_hierarchy_id, all_locations);
-    }else if(polygon_category && epsilon_value && specific_location){
+    }else if(epsilon_value && specific_location){
       //Display single specific locatation
-      request_and_display_gemeinden("", epsilon_value, specific_location, "", "");
+      request_and_display_gemeinden("", epsilon_value, specific_location, [], false);
     }else if(polygon_category && epsilon_value){
       //Display Category
-      request_and_display_gemeinden(polygon_category, epsilon_value,"", "", "");
+      request_and_display_gemeinden(polygon_category, epsilon_value,"", [], false);
     }else if (specific_location_hierarchy_id && epsilon_value){
       //Display locations by location hierarchy
-      request_and_display_gemeinden("", epsilon_value,"", specific_location_hierarchy_id, "");
+      request_and_display_gemeinden("", epsilon_value,"", specific_location_hierarchy_id, false);
     }else{
       jQuery("#location_category").val("");
       jQuery("#epsilon_factor").val("");
@@ -45,15 +43,24 @@ jQuery(document).ready(function(){
     specific_location_hierarchy = jQuery("#specific_location_hierarchy_id").val();
     all_locations               = jQuery("#all_locations").is(":checked")
 
-    if(all_locations){
+   if(polygon_category && epsilon_value){
+      if(all_locations){
+        var callback = function(specific_location_hierarchy){
+          parse_hierarchy_polygons("",epsilon_value,"",specific_location_hierarchy)
+        }
+        get_all_hierarchies(callback, polygon_category)
+      }else{
+        parse_hierarchy_polygons(polygon_category,epsilon_value,"",[])
+      }
+    }else if(( specific_location || specific_location_hierarchy) && epsilon_value ){
+      parse_hierarchy_polygons(polygon_category,epsilon_value,specific_location,specific_location_hierarchy.split(","));
+    } else if(all_locations){
       var callback = function(specific_location_hierarchy){
         parse_hierarchy_polygons("",epsilon_value,"",specific_location_hierarchy)
       }
-      get_all_hierarchies(callback)
+      get_all_hierarchies(callback, "")
 
-    }else if((polygon_category || specific_location || specific_location_hierarchy) && epsilon_value ){
-      parse_hierarchy_polygons(polygon_category,epsilon_value,specific_location,specific_location_hierarchy.split(","));
-    }else{
+    }else {
       jQuery("#location_category").val("");
       jQuery("#epsilon_factor").val("");
     }
@@ -62,16 +69,17 @@ jQuery(document).ready(function(){
 
 })
 
-function get_all_hierarchies(parse_data_callback){
+function get_all_hierarchies(parse_data_callback, category){
   jQuery.ajax({
          url: ajaxurl, 
          data:{
-          action: "get_all_hierarchies"
+          action: "get_all_hierarchies",
+          category : category
          },
          success: function(result){
           hierarchies = JSON.parse(result)
           console.log(hierarchies)
-          parse_data_callback(hierarchies[0])
+          parse_data_callback([hierarchies[0]])
           // next_hierarchy_index = 1
           // for(var i = 0; i < hierarchies.length; i++){
           //   polygons_to_simplify = {}
@@ -84,6 +92,7 @@ function get_all_hierarchies(parse_data_callback){
 
 
 function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_location, specific_location_hierarchy){
+  console.log("GETTING POLYGONS FOR HIERARCHY ID: " + specific_location_hierarchy)
   jQuery.ajax({
          url: ajaxurl, 
          data:{
@@ -179,7 +188,7 @@ function send_to_db(geo_data_to_save){
           next_hierarchy_index++
           if(hierarchies[next_hierarchy_index]){
             // console.log(next_hierarchy_index)
-            parse_hierarchy_polygons("",epsilon_value,"",hierarchies[next_hierarchy_index]);
+            parse_hierarchy_polygons("",epsilon_value,"",[hierarchies[next_hierarchy_index]]);
           }
         }
       }});

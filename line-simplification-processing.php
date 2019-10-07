@@ -38,31 +38,21 @@ function get_simpl_polygon_data(){
 	$specific_location_hierarchy_id = $_REQUEST['specific_location_hierarchy_id'];
 
 	$all_simplified_polygons = $_REQUEST['all_simplified_polygons'];
-
-	error_log('Epsilon: ' . $epsilon);
-	error_log('Hierarchie: ' . $specific_location_hierarchy_id);
-	error_log('Cat: ' . $polygon_category);
-	error_log('Specific: ' . $specific_location);
-	error_log('ALL SIMPLIFIED: ' . $all_simplified_polygons);
 	
 	if(filter_var($all_simplified_polygons, FILTER_VALIDATE_BOOLEAN)){
-		error_log('ALL Simplified');
 		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
 		FROM polygone_vereinfacht
 		WHERE  polygone_vereinfacht.Epsilon = $epsilon");
 	}else if(count($specific_location_hierarchy_id) != 0){
-		error_log('Hierarchie');
 		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
 		FROM polygone_vereinfacht, orte, orte_hierarchien
 		WHERE polygone_vereinfacht.Id_Ort = orte.Id_Ort AND orte_hierarchien.Id_Ueberort in ( " . implode(", ", $specific_location_hierarchy_id) . " )" . " AND orte.Id_Ort = orte_hierarchien.Id_Ort AND polygone_vereinfacht.Epsilon = $epsilon");
 	}else if(strcmp($polygon_category, "") != 0){
-		error_log('Category');
 		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
 		FROM polygone_vereinfacht, orte
 		WHERE polygone_vereinfacht.Id_Ort = orte.Id_Ort AND orte.Id_Kategorie = $polygon_category AND polygone_vereinfacht.Epsilon = $epsilon
 		");
 	}else if(strcmp($specific_location, "") != 0){
-		error_log('specific');
 		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
 		FROM polygone_vereinfacht, orte
 		WHERE polygone_vereinfacht.Id_Ort = orte.Id_Ort AND polygone_vereinfacht.Epsilon = $epsilon AND orte.Id_Ort = $specific_location
@@ -132,7 +122,7 @@ function get_hierarchy_polygons(){
 		$location_data = $db_obj->get_results("SELECT Id_Ort, ST_AsText(orte.Geodaten)  as coordinates FROM orte WHERE Id_Ort = $loc_id");
 	}else if(count($specific_location_hierarchy) != 0){
 		$location_data = $db_obj->get_results("SELECT o.Id_Ort, ST_AsText(o.Geodaten) as coordinates FROM orte o join orte_hierarchien o_h on o.Id_Ort = o_h.Id_Ort WHERE Id_Ueberort in ( " . implode(", ", $specific_location_hierarchy) . " )");
-	}else{
+	}else if(strcmp($polygon_category, "") != 0){
 		$location_data = $db_obj->get_results("SELECT Id_Ort, ST_AsText(orte.Geodaten) as coordinates FROM orte WHERE Id_Kategorie = $polygon_category");
 	}
 	
@@ -217,10 +207,16 @@ add_action('wp_ajax_nopriv_get_all_hierarchies', 'get_all_hierarchies');
 add_action('wp_ajax_get_all_hierarchies', 'get_all_hierarchies');
 function get_all_hierarchies(){
 	global $db_obj;
+	$category = $_REQUEST['category'];
 
 	$hierarchy_ids = [];
 
-	$location_data = $db_obj->get_results("SELECT DISTINCT Id_Ueberort FROM orte_hierarchien");
+	if(strcmp($category, "") != 0){
+		$location_data = $db_obj->get_results("SELECT DISTINCT Id_Ueberort FROM orte_hierarchien, orte WHERE orte.Id_Ort = orte_hierarchien.Id_Ueberort AND orte.Id_Kategorie = $category");
+	}else{
+		$location_data = $db_obj->get_results("SELECT DISTINCT Id_Ueberort FROM orte_hierarchien");
+
+	}
 
 	foreach ($location_data as $value) {
 		array_push($hierarchy_ids, $value->Id_Ueberort);
