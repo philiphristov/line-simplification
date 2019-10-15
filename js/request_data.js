@@ -109,7 +109,7 @@ function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_locati
          for (var i = 0; i < locations_info.length; i++) {
           polygon = locations_info[i].coordinates;
           polygon1_id = locations_info[i].id;
-
+           // console.log(polygon1_id)
            for (var j = 0; j < locations_info.length; j++) {
             if(i != j){
               polygon_to_compare = locations_info[j].coordinates;
@@ -128,17 +128,19 @@ function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_locati
 Display Polygons from category
 */
 function request_and_display_gemeinden(polygon_category, epsilon_value,specific_location,specific_location_hierarchy_id,all_simplified_polygons){
+  display_data = { polygon_category: polygon_category,
+                   epsilon : epsilon_value,
+                   specific_location : specific_location,
+                   specific_location_hierarchy_id : specific_location_hierarchy_id,
+                   all_simplified_polygons : all_simplified_polygons
+                 }
 
    jQuery.ajax({
       type: 'POST',
       url: ajaxurl, //ajax_object.ajax_url
       data: {
          action : 'get_simpl_polygon_data',
-         polygon_category: polygon_category,
-         epsilon : epsilon_value,
-         specific_location : specific_location,
-         specific_location_hierarchy_id : specific_location_hierarchy_id,
-         all_simplified_polygons : all_simplified_polygons
+        display_data : JSON.stringify({display_data : display_data})
       },
     
       success: function(result){

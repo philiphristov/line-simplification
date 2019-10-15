@@ -32,12 +32,16 @@ add_action('wp_ajax_get_simpl_polygon_data', 'get_simpl_polygon_data');
 function get_simpl_polygon_data(){
 	global $db_obj;
 
-	$polygon_category = $_REQUEST['polygon_category'];
-	$epsilon = $_REQUEST['epsilon'];
-	$specific_location = $_REQUEST['specific_location'];
-	$specific_location_hierarchy_id = $_REQUEST['specific_location_hierarchy_id'];
+	// $display_data = $_REQUEST['display_data']
 
-	$all_simplified_polygons = $_REQUEST['all_simplified_polygons'];
+	$display_data = json_decode(stripslashes($_REQUEST["display_data"]), true)['display_data'];
+	
+	$polygon_category = $display_data['polygon_category'];
+	$epsilon = $display_data['epsilon'];
+	$specific_location = $display_data['specific_location'];
+	$specific_location_hierarchy_id = $display_data['specific_location_hierarchy_id'];
+
+	$all_simplified_polygons = $display_data['all_simplified_polygons'];
 	
 	if(filter_var($all_simplified_polygons, FILTER_VALIDATE_BOOLEAN)){
 		$location_data = $db_obj->get_results("SELECT polygone_vereinfacht.Id_Ort, ST_AsText(polygone_vereinfacht.Geodaten) AS coordinates 
@@ -120,7 +124,7 @@ function get_hierarchy_polygons(){
 	if(strcmp($loc_id, "") != 0){
 		$loc_id = $_REQUEST["specific_location"];
 		$location_data = $db_obj->get_results("SELECT Id_Ort, ST_AsText(orte.Geodaten)  as coordinates FROM orte WHERE Id_Ort = $loc_id");
-	}else if(count($specific_location_hierarchy) != 0){
+	}else if(!empty($specific_location_hierarchy)){
 		$location_data = $db_obj->get_results("SELECT o.Id_Ort, ST_AsText(o.Geodaten) as coordinates FROM orte o join orte_hierarchien o_h on o.Id_Ort = o_h.Id_Ort WHERE Id_Ueberort in ( " . implode(", ", $specific_location_hierarchy) . " )");
 	}else if(strcmp($polygon_category, "") != 0){
 		$location_data = $db_obj->get_results("SELECT Id_Ort, ST_AsText(orte.Geodaten) as coordinates FROM orte WHERE Id_Kategorie = $polygon_category");
