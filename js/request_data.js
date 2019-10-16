@@ -200,7 +200,6 @@ function send_to_db(geo_data_to_save){
 function rebuild_polygons(){
   for (var pol_id in polygons_to_simplify) {
     if (polygons_to_simplify.hasOwnProperty(pol_id)) {
-            
       var intersections = polygons_to_simplify[pol_id].intersection
       var polygon = polygons_to_simplify[pol_id].polygon;
       polygons_to_simplify[pol_id]['simplified'] = new_simplify_and_perserve(polygon, intersections);
@@ -211,12 +210,13 @@ function rebuild_polygons(){
         // console.log("")
       }else{
         polygons_to_simplify[pol_id]['simplified'] = polygon.geometry.coordinates[0]
+        console.log("Not simplified")
         // console.log("not simplified!!!!!!!!")
         // console.log("original length: " + polygon.geometry.coordinates[0].length)
         // console.log("simplified length: " + polygons_to_simplify[pol_id]['simplified'].length)
         // console.log("")
       }
-      var polygon = turf.polygon([polygons_to_simplify[pol_id]['simplified']])
+      // var polygon = turf.polygon([polygons_to_simplify[pol_id]['simplified']])
       // display_feature(polygon, "red")
     }
   }
@@ -404,7 +404,6 @@ function new_simplify_and_perserve(multipolygon, intersections){
 
     }
   }
-
   // compute outer linestrings of each polygon by substracting intersections from all polygon coodinates
   var multiline_coordinates = construct_outer_lines(multipolygon, intersections_arr);
 
@@ -426,7 +425,8 @@ function new_simplify_and_perserve(multipolygon, intersections){
           
           var line_string = turf.lineString(simplify_, options)
           
-          reconstructed_polygon.push(line_string)
+          // reconstructed_polygon.push(line_string)
+          reconstructed_polygon.push(simplify_)
         }else{
           var current_line = line_coordinates[line]
           reconstructed_polygon.push(current_line)
@@ -450,11 +450,13 @@ function new_simplify_and_perserve(multipolygon, intersections){
           if(simplify_.length >= 2){
             try{
               var line_string = turf.lineString(simplify_)
-              reconstructed_polygon.push(line_string);  
+              // reconstructed_polygon.push(line_string);  
+              reconstructed_polygon.push(simplify_);  
             }catch(e){
               console.log(e)
               var line_string = turf.lineString([simplify_,simplify_])
-              reconstructed_polygon.push(line_string); 
+              // reconstructed_polygon.push(line_string); 
+              reconstructed_polygon.push([simplify_,simplify_]); 
             } 
           }
         }
@@ -465,8 +467,7 @@ function new_simplify_and_perserve(multipolygon, intersections){
   }
 
 
-  reconstructed_polygon = reconstructed_polygon.filter(el => el.hasOwnProperty('geometry') )
-
+  // reconstructed_polygon = reconstructed_polygon.filter(el => el.hasOwnProperty('geometry') )
   reconstructed_polygon = linestrings_to_polygon(reconstructed_polygon);
 
   return reconstructed_polygon;
@@ -637,8 +638,9 @@ function point_on_line(lat, lng, line){
 
 function linestrings_to_polygon(feature_array){
 
-  coordinates_array = feature_array.map(feature => feature.geometry.coordinates)
-
+  // coordinates_array = feature_array.map(feature => feature.geometry.coordinates)
+  coordinates_array = feature_array
+  
   if(Array.isArray(coordinates_array) && coordinates_array.length > 0){
     ordered_linestrings = get_ordered_coords_array(coordinates_array)
 
@@ -661,6 +663,8 @@ function linestrings_to_polygon(feature_array){
       }
 
     }
+  }else{
+    ordered_linestrings = null
   }
 
   return ordered_linestrings
@@ -683,7 +687,9 @@ function get_ordered_coords_array(feature_array){
       var current_start = current_element[0]
       var current_end = current_element[current_element.length - 1]
 
-      var closest_index_data = get_closest_index(counter,current_start,current_end,feature_array, array_counter)
+      // var closest_index_data = get_closest_index(counter,current_start,current_end,feature_array, array_counter)
+      // var closest_index_data = get_closest_index_test(counter,current_start,current_end,feature_array, array_counter)
+      var closest_index_data = get_closest_index_test2(counter,current_start,current_end,feature_array, array_counter)
 
       var closest_index = closest_index_data.index
       var flip = closest_index_data.flip
@@ -703,9 +709,11 @@ function get_ordered_coords_array(feature_array){
         }
 
         if(prepend){
-          coordinates_to_add.map(coord => ordered_linestrings.unshift(coord) )
+          // coordinates_to_add.map(coord => ordered_linestrings.unshift(coord) )
+          ordered_linestrings = coordinates_to_add.concat(ordered_linestrings)
         }else{
-          coordinates_to_add.map( coord => ordered_linestrings.push(coord))
+          // coordinates_to_add.map( coord => ordered_linestrings.push(coord))
+          ordered_linestrings = ordered_linestrings.concat(coordinates_to_add)
         }
 
       }
@@ -836,6 +844,277 @@ function get_closest_index(current_index, current_start, current_end, elements_a
   return { index: closest_index, flip: flip, prepend: prepend}
 }
 
+function get_closest_index_test(current_index, current_start, current_end, elements_array, array_counter){
+  
+  // closest_index_start_to_start = 0
+  // current_distance_start_to_start = 100
+
+  // closest_index_start_to_end = 0
+  // current_distance_start_to_end = 100
+
+  // //
+
+  // closest_index_end_to_start = 0
+  // current_distance_end_to_start = 100
+
+  // closest_index_end_to_end = 0
+  // current_distance_end_to_end = 100
+  
+
+  current_start_point = turf.point(current_start)
+
+  current_end_point = turf.point(current_end)
+
+  flip = false
+  prepend = false
+  next_index = 0
+  
+  for(var i = 0; i < elements_array.length; i++){
+    if(current_index != i){
+
+      if(current_start == elements_array[i][0]){
+        next_index = i
+        flip = true
+        prepend = true
+      }
+
+      if(current_start == elements_array[i][elements_array[i].length - 1]){
+        next_index = i
+        flip = false
+        prepend = true
+      }
+
+      if(current_end_point == elements_array[i][0]){
+        next_index = i
+        flip = false
+        prepend = false
+      }
+
+      if(current_end_point == elements_array[i][elements_array[i].length - 1]){
+        next_index = i
+        flip = true
+        prepend = false
+      }
+      // searched_element_start_point = turf.point(elements_array[i][0])
+      // searched_element_end_point = turf.point(elements_array[i][elements_array[i].length - 1])
+
+      // distance_start_to_start = turf.distance(current_start_point, searched_element_start_point)
+      // distance_start_to_end = turf.distance(current_start_point, searched_element_end_point)
+
+      // distance_end_to_start = turf.distance(current_end_point, searched_element_start_point)
+      // distance_end_to_end = turf.distance(current_end_point, searched_element_end_point)
+
+      // if((distance_start_to_start < current_distance_start_to_start) && !array_counter.includes(i)){
+      //   current_distance_start_to_start = distance_start_to_start
+      //   closest_index_start_to_start = i
+      // }
+
+      // if((distance_start_to_end < current_distance_start_to_end) && !array_counter.includes(i)){
+      //   current_distance_start_to_end = distance_start_to_end
+      //   closest_index_start_to_end = i
+      // }
+
+      // if((distance_end_to_start < current_distance_end_to_start) && !array_counter.includes(i)){
+      //   current_distance_end_to_start = distance_end_to_start
+      //   closest_index_end_to_start = i
+      // }
+
+      // if((distance_end_to_end < current_distance_end_to_end) && !array_counter.includes(i)){
+      //   current_distance_end_to_end = distance_end_to_end
+      //   closest_index_end_to_end = i
+      // }
+
+    }
+  }
+
+  // closest_start_distance = 10000000
+  // if(current_distance_start_to_end < current_distance_start_to_start){
+  //   closest_index_start = closest_index_start_to_end
+  //   closest_start_distance = current_distance_start_to_end
+  //   // flip = false
+  // }else{
+  //   closest_index_start = closest_index_start_to_start
+  //   closest_start_distance = current_distance_start_to_start
+  //   // flip = true
+  // }
+
+  // closest_end_distance = 10000000
+  // if(current_distance_end_to_end < current_distance_end_to_start){
+  //   closest_index_end = closest_index_end_to_end
+  //   closest_end_distance = current_distance_end_to_end
+  //   // flip = true
+  // }else{
+  //   closest_index_end = closest_index_end_to_start
+  //   closest_end_distance = current_distance_end_to_start
+  //   // flip = false
+  // }
+
+  // if(closest_end_distance < closest_start_distance){
+  //   closest_index = closest_index_end
+  //   prepend = false
+
+  //   if(current_distance_end_to_end < current_distance_end_to_start){
+  //     flip = true
+  //   }else{
+  //     flip = false
+  //   }
+
+  // }else if(closest_end_distance > closest_start_distance){
+  //   closest_index = closest_index_start
+  //   prepend = true
+    
+  //   if(current_distance_start_to_end < current_distance_start_to_start){
+  //     flip = true
+  //   }else{
+  //     flip = false
+  //   }
+
+  // }else{
+  //   closest_index = closest_index_end
+  //   prepend = false
+
+  //   if(current_distance_end_to_end < current_distance_end_to_start){
+  //     flip = true
+  //   }else{
+  //     flip = false
+  //   }
+
+  // }
+
+  if(next_index == 0){
+    return get_closest_index(current_index, current_start, current_end, elements_array, array_counter)
+  }
+
+  return { index: next_index, flip: flip, prepend: prepend}
+}
+
+
+function get_closest_index_test2(current_index, current_start, current_end, elements_array, array_counter){
+  
+  closest_index_start_to_start = 0
+  current_distance_start_to_start = 100
+
+  closest_index_start_to_end = 0
+  current_distance_start_to_end = 100
+
+  //
+
+  closest_index_end_to_start = 0
+  current_distance_end_to_start = 100
+
+  closest_index_end_to_end = 0
+  current_distance_end_to_end = 100
+  
+
+  current_start_point = turf.point(current_start)
+
+  current_end_point = turf.point(current_end)
+
+  for(var i = 0; i < elements_array.length; i++){
+    if(current_index != i){
+
+      searched_element_start_point = turf.point(elements_array[i][0])
+      searched_element_end_point = turf.point(elements_array[i][elements_array[i].length - 1])
+
+      distance_start_to_start = turf.distance(current_start_point, searched_element_start_point)
+      distance_start_to_end = turf.distance(current_start_point, searched_element_end_point)
+
+      distance_end_to_start = turf.distance(current_end_point, searched_element_start_point)
+      distance_end_to_end = turf.distance(current_end_point, searched_element_end_point)
+
+      if((distance_start_to_start < current_distance_start_to_start) && !array_counter.includes(i)){
+        current_distance_start_to_start = distance_start_to_start
+        closest_index_start_to_start = i
+        if(current_distance_start_to_start == 0){
+          return { index: i, flip: true, prepend: true}
+        }
+      }
+
+      if((distance_start_to_end < current_distance_start_to_end) && !array_counter.includes(i)){
+        current_distance_start_to_end = distance_start_to_end
+        closest_index_start_to_end = i
+        if(current_distance_start_to_end == 0){
+          return { index: i, flip: false, prepend: true}
+        }
+      }
+
+      if((distance_end_to_start < current_distance_end_to_start) && !array_counter.includes(i)){
+        current_distance_end_to_start = distance_end_to_start
+        closest_index_end_to_start = i
+        if(current_distance_end_to_start == 0){
+          return { index: i, flip: false, prepend: false}
+        }
+      }
+
+      if((distance_end_to_end < current_distance_end_to_end) && !array_counter.includes(i)){
+        current_distance_end_to_end = distance_end_to_end
+        closest_index_end_to_end = i
+        if(current_distance_end_to_end == 0){
+          return { index: i, flip: true, prepend: false}
+        }
+      }
+
+    }
+  }
+
+  closest_start_distance = 10000000
+  if(current_distance_start_to_end < current_distance_start_to_start){
+    closest_index_start = closest_index_start_to_end
+    closest_start_distance = current_distance_start_to_end
+    // flip = false
+  }else{
+    closest_index_start = closest_index_start_to_start
+    closest_start_distance = current_distance_start_to_start
+    // flip = true
+  }
+
+  closest_end_distance = 10000000
+  if(current_distance_end_to_end < current_distance_end_to_start){
+    closest_index_end = closest_index_end_to_end
+    closest_end_distance = current_distance_end_to_end
+    // flip = true
+  }else{
+    closest_index_end = closest_index_end_to_start
+    closest_end_distance = current_distance_end_to_start
+    // flip = false
+  }
+
+  if(closest_end_distance < closest_start_distance){
+    closest_index = closest_index_end
+    prepend = false
+
+    if(current_distance_end_to_end < current_distance_end_to_start){
+      flip = true
+    }else{
+      flip = false
+    }
+
+  }else if(closest_end_distance > closest_start_distance){
+    closest_index = closest_index_start
+    prepend = true
+    
+    if(current_distance_start_to_end < current_distance_start_to_start){
+      flip = true
+    }else{
+      flip = false
+    }
+
+  }else{
+    closest_index = closest_index_end
+    prepend = false
+
+    if(current_distance_end_to_end < current_distance_end_to_start){
+      flip = true
+    }else{
+      flip = false
+    }
+
+  }
+
+
+
+  return { index: closest_index, flip: flip, prepend: prepend}
+}
 
 function json_to_wkt(obj_type, json_data){
   var polygons_to_join = []
