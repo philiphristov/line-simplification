@@ -646,9 +646,18 @@ function linestrings_to_polygon(feature_array){
 
     try{
       var polygon = turf.polygon([ordered_linestrings])
-
+      // var poligonized = turf.polygonize(turf.multiLineString(coordinates_array))
+      // ordered_linestrings = turf.getCoords(poligonized)
+      // console.log(ordered_linestrings)
     }catch(e){
       // console.log("Error")
+      // console.log(ordered_linestrings)
+      // ordered_linestrings = null
+      // console.log(ordered_linestrings.map(pnt => turf.point(pnt)))
+      // feature = turf.featureCollection(ordered_linestrings.map(point => turf.point(point)))
+      // concave = turf.concave(feature)
+      // display_feature(concave)
+
       try{
         var first_point = ordered_linestrings[0]
         var last_point = ordered_linestrings[ordered_linestrings.length - 1]
@@ -689,7 +698,7 @@ function get_ordered_coords_array(feature_array){
 
       // var closest_index_data = get_closest_index(counter,current_start,current_end,feature_array, array_counter)
       // var closest_index_data = get_closest_index_test(counter,current_start,current_end,feature_array, array_counter)
-      var closest_index_data = get_closest_index_test2(counter,current_start,current_end,feature_array, array_counter)
+      var closest_index_data = get_closest_index_test2(array_counter,current_start,current_end,feature_array, array_counter)
 
       var closest_index = closest_index_data.index
       var flip = closest_index_data.flip
@@ -989,7 +998,7 @@ function get_closest_index_test(current_index, current_start, current_end, eleme
 }
 
 
-function get_closest_index_test2(current_index, current_start, current_end, elements_array, array_counter){
+function get_closest_index_test2(array_counter, current_start, current_end, elements_array, array_counter){
   
   closest_index_start_to_start = 0
   current_distance_start_to_start = 100
@@ -1011,7 +1020,7 @@ function get_closest_index_test2(current_index, current_start, current_end, elem
   current_end_point = turf.point(current_end)
 
   for(var i = 0; i < elements_array.length; i++){
-    if(current_index != i){
+    if(!array_counter.includes(i)){
 
       searched_element_start_point = turf.point(elements_array[i][0])
       searched_element_end_point = turf.point(elements_array[i][elements_array[i].length - 1])
@@ -1038,19 +1047,19 @@ function get_closest_index_test2(current_index, current_start, current_end, elem
         }
       }
 
-      if((distance_end_to_start < current_distance_end_to_start) && !array_counter.includes(i)){
-        current_distance_end_to_start = distance_end_to_start
-        closest_index_end_to_start = i
-        if(current_distance_end_to_start == 0){
-          return { index: i, flip: false, prepend: false}
-        }
-      }
-
       if((distance_end_to_end < current_distance_end_to_end) && !array_counter.includes(i)){
         current_distance_end_to_end = distance_end_to_end
         closest_index_end_to_end = i
         if(current_distance_end_to_end == 0){
           return { index: i, flip: true, prepend: false}
+        }
+      }
+
+      if((distance_end_to_start < current_distance_end_to_start) && !array_counter.includes(i)){
+        current_distance_end_to_start = distance_end_to_start
+        closest_index_end_to_start = i
+        if(current_distance_end_to_start == 0){
+          return { index: i, flip: false, prepend: false}
         }
       }
 
@@ -1079,7 +1088,7 @@ function get_closest_index_test2(current_index, current_start, current_end, elem
     // flip = false
   }
 
-  if(closest_end_distance < closest_start_distance){
+  if(closest_end_distance <= closest_start_distance){
     closest_index = closest_index_end
     prepend = false
 
@@ -1089,7 +1098,7 @@ function get_closest_index_test2(current_index, current_start, current_end, elem
       flip = false
     }
 
-  }else if(closest_end_distance > closest_start_distance){
+  }else if(closest_end_distance >= closest_start_distance){
     closest_index = closest_index_start
     prepend = true
     
@@ -1099,17 +1108,18 @@ function get_closest_index_test2(current_index, current_start, current_end, elem
       flip = false
     }
 
-  }else{
-    closest_index = closest_index_end
-    prepend = false
-
-    if(current_distance_end_to_end < current_distance_end_to_start){
-      flip = true
-    }else{
-      flip = false
-    }
-
   }
+  // else{
+  //   closest_index = closest_index_end
+  //   prepend = false
+
+  //   if(current_distance_end_to_end < current_distance_end_to_start){
+  //     flip = true
+  //   }else{
+  //     flip = false
+  //   }
+
+  // }
 
 
 
