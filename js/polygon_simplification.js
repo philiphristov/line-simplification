@@ -7,7 +7,11 @@ polygons_to_simplify = {}
 
 
 jQuery(document).ready(function(){
+  
 
+  /**
+   * Display Polygons depending on the fields (Category, Specific Location ID, Hierarchie ID, Epsilon).
+   */
   jQuery("#display_simplified_polygons").on("click", function(){
     polygon_category               = jQuery("#location_category").val();
     epsilon_value                  = jQuery("#epsilon_factor").val();
@@ -35,7 +39,10 @@ jQuery(document).ready(function(){
 
 
   
-
+  /**
+   * Simplifing Polygons matching the fields Values (Category, Specific Location ID, Hierarchie ID, Epsilon).
+   * 
+   */
   jQuery("#simplify_polygons").on("click", function(){
     polygon_category            = jQuery("#location_category").val();
     epsilon_value               = jQuery("#epsilon_factor").val();
@@ -43,31 +50,184 @@ jQuery(document).ready(function(){
     specific_location_hierarchy = jQuery("#specific_location_hierarchy_id").val();
     all_locations               = jQuery("#all_locations").is(":checked")
 
-   if(polygon_category && epsilon_value){
-      if(all_locations){
-        var callback = function(specific_location_hierarchy){
-          parse_hierarchy_polygons("",epsilon_value,"",specific_location_hierarchy)
-        }
-        get_all_hierarchies(callback, polygon_category)
-      }else{
-        parse_hierarchy_polygons(polygon_category,epsilon_value,"",[])
-      }
-    }else if(( specific_location || specific_location_hierarchy) && epsilon_value ){
-      parse_hierarchy_polygons(polygon_category,epsilon_value,specific_location,specific_location_hierarchy.split(","));
-    } else if(all_locations){
-      var callback = function(specific_location_hierarchy){
-        parse_hierarchy_polygons("",epsilon_value,"",specific_location_hierarchy)
-      }
-      get_all_hierarchies(callback, "")
-
-    }else {
-      jQuery("#location_category").val("");
-      jQuery("#epsilon_factor").val("");
+   if (polygon_category && epsilon_value) {
+    get_all_hierarchies(callback, polygon_category)
+    // if(all_locations){
+    //   var callback = function(specific_location_hierarchy){
+    //     parse_hierarchy_polygons("",epsilon_value,"",specific_location_hierarchy)
+    //   }
+    //   get_all_hierarchies(callback, polygon_category)
+    // }else{
+    //   parse_hierarchy_polygons(polygon_category,epsilon_value,"",[])
+    // }
+   } else if ((specific_location || specific_location_hierarchy) && epsilon_value) {
+    parse_hierarchy_polygons(polygon_category, epsilon_value, specific_location, specific_location_hierarchy.split(","));
+   } else if (all_locations) {
+    var callback = function(specific_location_hierarchy) {
+      parse_hierarchy_polygons("", epsilon_value, "", specific_location_hierarchy)
     }
+    get_all_hierarchies(callback, "")
+
+   } else {
+    jQuery("#location_category").val("");
+    jQuery("#epsilon_factor").val("");
+   }
 
   })
 
+  jQuery("#simplify_polygons_json").on("click", function(){
+    polygon_category = jQuery("#location_category").val();
+    epsilon_value = jQuery("#epsilon_factor").val();
+
+
+    jQuery.getJSON( url.plugins_Url + "neighbours_60_all.txt", function(json) {
+      // console.log(json);
+      
+      json_processed_polygons = json
+
+      init_polygons_simplification(polygon_category)
+
+    });
+  })
+
 })
+
+function init_polygons_simplification(category){
+  jQuery.ajax({
+         url: ajaxurl, 
+         data:{
+          action: "get_all_hierarchies",
+          category : category
+         },
+         success: function(result){
+          hierarchies = JSON.parse(result)
+          console.log(hierarchies)
+          console.log(json_processed_polygons)
+
+          next_hierarchy_index = 0
+
+          get_corresponding_polygons([hierarchies[next_hierarchy_index]], json_processed_polygons[hierarchies[next_hierarchy_index]])
+
+         }
+       })
+}
+
+function get_corresponding_polygons(polygon_id, polygon_id_array) {
+  jQuery.ajax({
+    url: ajaxurl,
+    data: {
+      action: "get_corresponding_polygons",
+      polygon_id: polygon_id,
+      polygon_id_array: polygon_id_array
+    },
+    success: function(result) {
+
+      locations_info = JSON.parse(result);
+      
+      console.log(polygon_id);
+      console.log(locations_info.length - 1);
+
+      locations_info.map(function(location_data) {
+        location_data['parsed_coords'] = parseGeoDataArray(location_data.coordinates)
+        location_data['parsed_poly'] = turf.polygon(location_data['parsed_coords'])
+      })
+
+
+      polygons_to_simplify = {}
+
+      if (locations_info.length > 1) {
+          polygon1_coords = locations_info[0].parsed_coords;
+          polygon1_id = locations_info[0].id;
+          poly1 = locations_info[0].parsed_poly
+          for (var j = 0; j < locations_info.length; j++) {
+            if (0 != j) {
+              polygon2_coords = locations_info[j].parsed_coords;
+              polygon2_id = locations_info[j].id;
+              poly2 = locations_info[j].parsed_poly
+              find_intersections(polygon1_coords, poly1, polygon1_id, polygon2_coords, poly2, polygon2_id);
+            }
+          }
+
+        // var num intersections = 0;
+        // console.log(polygons_to_simplify[polygon_id].intersections.length)
+
+        rebuild_polygons_json(polygon_id);
+
+      } 
+
+    }
+  })
+}
+
+function rebuild_polygons_json(polygon_id) {
+  // console.log(polygon_id)
+  // console.log(polygons_to_simplify)
+
+  for (poly_id in polygons_to_simplify) {
+    if (poly_id.includes(polygon_id)) {
+
+      var intersections = polygons_to_simplify[poly_id].intersection
+      var polygon = polygons_to_simplify[poly_id].polygon;
+      polygons_to_simplify[poly_id]['simplified'] = new_simplify_and_perserve(polygon, intersections);
+
+      if (polygons_to_simplify[poly_id]['simplified']) {
+
+      } else {
+        polygons_to_simplify[poly_id]['simplified'] = polygon.geometry.coordinates[0]
+        console.log("Not simplified")
+
+      }
+    }
+  }
+
+  to_save_in_db = []
+
+  for (var i = 0; i < locations_info.length; i++) {
+    var geo_data = locations_info[i]
+    var cur_id = geo_data.id
+
+    if (geo_data.coordinates.includes("POLYGON")) { var geo_type = "polygon" }
+    if (geo_data.coordinates.includes("MULTIPOLYGON")) { var geo_type = "multipolygon" }
+
+    var geo_objects = []
+    var number_ = 0
+    for (poly in polygons_to_simplify) {
+      if (poly.includes(polygon_id)) {
+        geo_objects.push(polygons_to_simplify[poly])
+        number_++
+      }
+    }
+  }
+  
+  console.log(number_)
+
+  var wkt_data = json_to_wkt(geo_type, geo_objects)
+
+  to_save_in_db.push({ id: cur_id, location_data: wkt_data, epsilon: epsilon_value })
+
+
+  send_to_db_json(to_save_in_db)
+}
+
+function send_to_db_json(geo_data_to_save){
+      jQuery.ajax({url: ajaxurl ,//"save_to_database.php", 
+      type: "POST",
+      data:{
+        action: "save_to_database",
+        geo_data_to_save : JSON.stringify({locations_data : geo_data_to_save})
+      },
+
+      success: function(result){
+        console.log("SAVED")
+        if(hierarchies.length > 0){
+          next_hierarchy_index++
+          if(hierarchies[next_hierarchy_index]){
+            get_corresponding_polygons([hierarchies[next_hierarchy_index]], json_processed_polygons[hierarchies[next_hierarchy_index]])
+          }
+        }
+      }});
+}
+
 
 function get_all_hierarchies(parse_data_callback, category){
   jQuery.ajax({
@@ -79,7 +239,8 @@ function get_all_hierarchies(parse_data_callback, category){
          success: function(result){
           hierarchies = JSON.parse(result)
           console.log(hierarchies)
-          parse_data_callback([hierarchies[0]])
+          // parse_data_callback([hierarchies[0]])
+          
           // next_hierarchy_index = 1
           // for(var i = 0; i < hierarchies.length; i++){
           //   polygons_to_simplify = {}
@@ -116,14 +277,11 @@ function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_locati
 
          if(locations_info.length > 1){
            for (var i = 0; i < locations_info.length; i++) {
-            // polygon = locations_info[i].coordinates;
             polygon1_coords = locations_info[i].parsed_coords;
             polygon1_id = locations_info[i].id;
             poly1 = locations_info[i].parsed_poly
-             // console.log(polygon1_id)
              for (var j = 0; j < locations_info.length; j++) {
               if(i != j){
-                // polygon_to_compare = locations_info[j].coordinates;
                 polygon2_coords = locations_info[j].parsed_coords;
                 polygon2_id = locations_info[j].id;
                 poly2 = locations_info[j].parsed_poly
@@ -137,7 +295,6 @@ function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_locati
          }else if (locations_info.length == 1){
           var pol_coord = parseGeoDataArray(locations_info[0].coordinates)
           console.log(pol_coord)
-          // var pol_geom = turf.polygon(pol_coord);
           polygon_id = locations_info[0].id
 
           for (var i = 0; i < pol_coord.length; i++) {
@@ -151,7 +308,6 @@ function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_locati
           if(hierarchies.length > 0){
             next_hierarchy_index++
             if(hierarchies[next_hierarchy_index]){
-              // console.log(next_hierarchy_index)
               parse_hierarchy_polygons("",epsilon_value,"",[hierarchies[next_hierarchy_index]]);
             }
           }
@@ -216,9 +372,6 @@ function send_to_db(geo_data_to_save){
       data:{
         action: "save_to_database",
         geo_data_to_save : JSON.stringify({locations_data : geo_data_to_save})
-        // id_data : id,
-        // location_data:loc_data,
-        // epsilon : eps
       },
 
       success: function(result){
@@ -226,7 +379,6 @@ function send_to_db(geo_data_to_save){
         if(hierarchies.length > 0){
           next_hierarchy_index++
           if(hierarchies[next_hierarchy_index]){
-            // console.log(next_hierarchy_index)
             parse_hierarchy_polygons("",epsilon_value,"",[hierarchies[next_hierarchy_index]]);
           }
         }
@@ -237,33 +389,19 @@ function send_to_db(geo_data_to_save){
 function rebuild_polygons(){
   for (var pol_id in polygons_to_simplify) {
     if (polygons_to_simplify.hasOwnProperty(pol_id)) {
-      // console.log(pol_id)
       var intersections = polygons_to_simplify[pol_id].intersection
       var polygon = polygons_to_simplify[pol_id].polygon;
       polygons_to_simplify[pol_id]['simplified'] = new_simplify_and_perserve(polygon, intersections);
 
       if(polygons_to_simplify[pol_id]['simplified']){
-        // console.log("original length: " + polygon.geometry.coordinates[0].length)
-        // console.log("simplified length: " + polygons_to_simplify[pol_id]['simplified'].length)
-        // console.log("")
 
-        // try{
-        //   var polygon_ = turf.cleanCoords(turf.polygon([polygons_to_simplify[pol_id]['simplified']]))
-        //   polygons_to_simplify[pol_id]['simplified'] = polygon_.geometry.coordinates[0]
-        // }catch(e){
-        //   console.log(e)
-        // }
         
       }else{
         polygons_to_simplify[pol_id]['simplified'] = polygon.geometry.coordinates[0]
         console.log("Not simplified")
-        // console.log("not simplified!!!!!!!!")
-        // console.log("original length: " + polygon.geometry.coordinates[0].length)
-        // console.log("simplified length: " + polygons_to_simplify[pol_id]['simplified'].length)
-        // console.log("")
+
       }
-      // var polygon = turf.polygon([polygons_to_simplify[pol_id]['simplified']])
-      // display_feature(polygon, "red")
+
     }
   }
 

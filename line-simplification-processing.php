@@ -27,6 +27,34 @@ function get_polygon_data(){
 	wp_die();
 }
 
+
+add_action('wp_ajax_nopriv_get_corresponding_polygons', 'get_corresponding_polygons');
+add_action('wp_ajax_get_corresponding_polygons', 'get_corresponding_polygons');
+function get_corresponding_polygons(){
+	global $db_obj;
+
+	$polygon_id = $_REQUEST['polygon_id'];
+	$polygon_arr = $_REQUEST['polygon_id_array'];
+
+	$polygon_ids = array_merge($polygon_id, $polygon_arr);
+
+	$location_data = $db_obj->get_results("SELECT Id_Ort, AsText(Geodaten) As coordinates FROM orte WHERE Id_Ort in ( " . implode(", ", $polygon_ids) . "  )" );
+	$json_data = [];
+
+
+	foreach ($location_data as $value) {
+
+		$single_location_data = array(
+				"id" => $value->Id_Ort,
+				"coordinates" => strip_tags($value->coordinates)
+		);
+		array_push($json_data,$single_location_data);
+	}
+
+	echo json_encode($json_data);
+	wp_die();
+}
+
 add_action('wp_ajax_nopriv_get_simpl_polygon_data', 'get_simpl_polygon_data');
 add_action('wp_ajax_get_simpl_polygon_data', 'get_simpl_polygon_data');
 function get_simpl_polygon_data(){

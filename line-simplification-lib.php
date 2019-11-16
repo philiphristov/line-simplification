@@ -26,14 +26,17 @@ function pol_simpl_scripts($hook) {
 
     wp_localize_script( 'ajax_calls_handler', 'ajax_object',array( 'ajax_url' => admin_url( 'admin-ajax.php' )));
 
-    wp_enqueue_script( 'jsts', plugins_url('line-simplification') . '/js/jsts.min.js' );
+    wp_enqueue_script( 'jsts', plugins_url('line-simplification') . '/js/old/jsts.min.js' );
     wp_enqueue_script( 'map', plugins_url('line-simplification') . '/js/map.js' );
     wp_enqueue_script( 'geo', plugins_url('line-simplification') . '/js/geo.js' );
     wp_enqueue_script( 'geo-to-arr', plugins_url('line-simplification') . '/js/geo-to-arr.js' );
-    wp_enqueue_script( 'line_simpl', plugins_url('line-simplification') . '/js/line_simplification.js' );
-    wp_enqueue_script( 'req_data', plugins_url('line-simplification') . '/js/request_data.js' );
+    wp_enqueue_script( 'line_simpl', plugins_url('line-simplification') . '/js/old/line_simplification.js' );
+    wp_enqueue_script( 'req_data', plugins_url('line-simplification') . '/js/polygon_simplification.js' );
     wp_enqueue_script( 'turf_min', plugins_url('line-simplification') . '/js/turf.min.js' );
-    wp_enqueue_script( 'simplify', plugins_url('line-simplification') . '/js/simplify.js' );
+    wp_enqueue_script( 'simplify', plugins_url('line-simplification') . '/js/old/simplify.js' );
+
+    wp_localize_script('req_data','url',array('plugins_Url'=>plugin_dir_url(__FILE__)));
+
 
 
     ?>
