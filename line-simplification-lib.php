@@ -41,6 +41,8 @@ function pol_simpl_scripts($hook) {
 
     ?>
     <script  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC28XHFNL1oOwEhotnCqyb_LkuYh1U6aVo&libraries=geometry" type="text/javascript" ></script>
+    <script src="https://unpkg.com/terraformer@1.0.8"></script>
+    <script src="https://unpkg.com/terraformer-wkt-parser@1.1.2"></script>
     <?php
 }
 add_action( 'admin_enqueue_scripts', 'pol_simpl_scripts' );

@@ -112,6 +112,8 @@ function init_polygons_simplification(category){
        })
 }
 
+var helper_obj = {}
+
 function get_corresponding_polygons(polygon_id, polygon_id_array) {
   jQuery.ajax({
     url: ajaxurl,
@@ -122,38 +124,65 @@ function get_corresponding_polygons(polygon_id, polygon_id_array) {
     },
     success: function(result) {
 
-      locations_info = JSON.parse(result);
-      
-      console.log(polygon_id);
-      console.log(locations_info.length - 1);
+      locations_info = JSON.parse(result)
+
+      console.log(polygon_id)
+
+      helper_obj = {}
 
       locations_info.map(function(location_data) {
+        // console.log(location_data.id)
+
         location_data['parsed_coords'] = parseGeoDataArray(location_data.coordinates)
-        location_data['parsed_poly'] = turf.polygon(location_data['parsed_coords'])
+        helper_obj[location_data.id] = location_data['parsed_coords'].length
+
+        location_data['parsed_poly'] = []
+
+
+        for (var i = 0; i < location_data['parsed_coords'].length; i++) {
+          coords = location_data['parsed_coords'][i]
+
+          if (location_data.coordinates.indexOf("MULTIPOLYGON") != -1) {
+            // console.log("MULTIPOLYGON");
+            // console.log(coords)
+            // location_data['parsed_poly'].push(turf.polygon([coords]))
+          } else if(location_data.coordinates.indexOf("POLYGON") != -1) {
+            // console.log("POLYGON");
+            // console.log(coords)
+            // location_data['parsed_poly'].push(turf.polygon([coords]))
+          }
+
+
+        }
+
+        
+
       })
 
+      
 
       polygons_to_simplify = {}
 
-      if (locations_info.length > 1) {
-          polygon1_coords = locations_info[0].parsed_coords;
-          polygon1_id = locations_info[0].id;
-          poly1 = locations_info[0].parsed_poly
-          for (var j = 0; j < locations_info.length; j++) {
-            if (0 != j) {
-              polygon2_coords = locations_info[j].parsed_coords;
-              polygon2_id = locations_info[j].id;
-              poly2 = locations_info[j].parsed_poly
-              find_intersections(polygon1_coords, poly1, polygon1_id, polygon2_coords, poly2, polygon2_id);
-            }
-          }
 
-        // var num intersections = 0;
-        // console.log(polygons_to_simplify[polygon_id].intersections.length)
+      searched_poly = locations_info.findIndex(function(element) {
+        return element.id == polygon_id
+      })
 
-        rebuild_polygons_json(polygon_id);
+      polygon1_coords = locations_info[searched_poly].parsed_coords
+      polygon1_id = locations_info[searched_poly].id
 
-      } 
+      // console.log(polygon1_coords)
+
+      for (var j = 0; j < locations_info.length; j++) {
+        if (searched_poly != j) {
+          polygon2_id = locations_info[j].id
+          polygon2_coords = locations_info[j].parsed_coords
+          
+          find_intersections_json(polygon1_coords, polygon2_coords, polygon1_id, polygon2_id)
+        }
+      }
+
+      rebuild_polygons_json(polygon_id)
 
     }
   })
@@ -161,17 +190,19 @@ function get_corresponding_polygons(polygon_id, polygon_id_array) {
 
 function rebuild_polygons_json(polygon_id) {
   // console.log(polygon_id)
-  // console.log(polygons_to_simplify)
+  console.log(polygons_to_simplify)
 
   for (poly_id in polygons_to_simplify) {
     if (poly_id.includes(polygon_id)) {
 
       var intersections = polygons_to_simplify[poly_id].intersection
       var polygon = polygons_to_simplify[poly_id].polygon;
+      // console.log(polygon)
+      // console.log(intersections)
       polygons_to_simplify[poly_id]['simplified'] = new_simplify_and_perserve(polygon, intersections);
 
       if (polygons_to_simplify[poly_id]['simplified']) {
-
+        // console.log(polygons_to_simplify[poly_id]['simplified'])
       } else {
         polygons_to_simplify[poly_id]['simplified'] = polygon.geometry.coordinates[0]
         console.log("Not simplified")
@@ -182,8 +213,10 @@ function rebuild_polygons_json(polygon_id) {
 
   to_save_in_db = []
 
-  for (var i = 0; i < locations_info.length; i++) {
-    var geo_data = locations_info[i]
+  // for (var i = 0; i < locations_info.length; i++) {
+    var geo_data = locations_info.find(function(element){
+      return element.id == polygon_id
+    })
     var cur_id = geo_data.id
 
     if (geo_data.coordinates.includes("POLYGON")) { var geo_type = "polygon" }
@@ -191,17 +224,31 @@ function rebuild_polygons_json(polygon_id) {
 
     var geo_objects = []
     var number_ = 0
+
+    var concatenating_polygon_multipoly = {}
+
     for (poly in polygons_to_simplify) {
-      if (poly.includes(polygon_id)) {
+      
+      var poly_id_data = poly.split("-")
+
+      if (poly.includes(polygon_id[0])) {
+
+        if(concatenating_polygon_multipoly.hasOwnProperty(poly_id_data[0]+"-"+poly_id_data[1] )){
+          concatenating_polygon_multipoly[poly_id_data[0]+"-"+poly_id_data[1]].push(polygons_to_simplify[poly])
+        }else{
+          concatenating_polygon_multipoly[poly_id_data[0]+"-"+poly_id_data[1]] = []
+          concatenating_polygon_multipoly[poly_id_data[0]+"-"+poly_id_data[1]].push(polygons_to_simplify[poly])
+        }
+
+        var current = polygons_to_simplify[poly]
         geo_objects.push(polygons_to_simplify[poly])
         number_++
+
       }
     }
-  }
+  // }
   
-  console.log(number_)
-
-  var wkt_data = json_to_wkt(geo_type, geo_objects)
+  var wkt_data = json_to_wkt(geo_type, geo_objects,concatenating_polygon_multipoly)
 
   to_save_in_db.push({ id: cur_id, location_data: wkt_data, epsilon: epsilon_value })
 
@@ -352,8 +399,15 @@ function request_and_display_gemeinden(polygon_category, epsilon_value,specific_
             var geoData = parseGeoDataArray(el.coord);
             var color = "red";
 
-            var polygon = turf.polygon(geoData)
-            display_feature(polygon, "red")
+            // console.log()
+            // console.log(parseGeoData(el.coord))
+            var geojson = Terraformer.WKT.parse(el.coord)
+            // console.log(geojson)
+            
+            // var polygon = turf.feature(geoData)
+            // var polygon = parseGeoData(el.coord)
+            
+            display_feature(geojson, "red", el.coord)
 
          }
 
@@ -430,6 +484,98 @@ function rebuild_polygons(){
 
 }
 
+function find_intersections_json(pol1_coord, pol2_coord, pol1_id, pol2_id) {
+  // console.log(pol1_coord)
+  // console.log(pol2_coord)
+
+  for(var i1 = 0; i1 < pol1_coord.length; i1++){
+    var line_ring_pol1 = pol1_coord[i1]
+
+    for (var i = 0; i < line_ring_pol1.length; i++) {
+      var pol1_geom = turf.polygon(line_ring_pol1[i]);
+
+      for(var j1 = 0; j1 < pol2_coord.length; j1++ ){
+        var line_ring_pol2 = pol2_coord[j1]
+      
+        for (var j = 0; j < line_ring_pol2.length; j++) {
+          var pol2_geom = turf.polygon(line_ring_pol2[j]);
+
+          var intersection = turf.lineOverlap(pol1_geom, pol2_geom); // intersect
+
+          if (intersection.features.length > 0) {
+
+            if (polygons_to_simplify.hasOwnProperty(pol1_id + "-" + i1  + "-" + i)) {
+              var test = polygons_to_simplify[pol1_id]
+
+              if (!polygons_to_simplify[pol1_id + "-" + i1  + "-" + i].intersection.hasOwnProperty(pol2_id + "-" + j1  + "-" + j)) {
+                polygons_to_simplify[pol1_id + "-" + i1  + "-" + i].intersection[pol2_id + "-" + j1  + "-" + j] = intersection
+
+                if (polygons_to_simplify[pol1_id + "-" + i1  + "-" + i].polygon.length > 0) {
+                  polygons_to_simplify[pol1_id + "-" + i1  + "-" + i].polygon = pol1_geom // .push(pol1_geom)
+                }
+
+              }
+
+            } else {
+
+              var arr = new Array();
+              var intersection_object = new Object();
+              arr.push(intersection);
+              intersection_object[pol2_id + "-" + j1  + "-" + j] = intersection
+
+              polygons_to_simplify[pol1_id + "-" + i1  + "-" + i] = { intersection: intersection_object, polygon: pol1_geom };
+
+            }
+
+            if (polygons_to_simplify.hasOwnProperty(pol2_id + "-" + j1  + "-" + j)) {
+
+              if (!polygons_to_simplify[pol2_id + "-" + j1  + "-" + j].intersection.hasOwnProperty(pol1_id + "-" + i1  + "-" + i)) {
+                polygons_to_simplify[pol2_id + "-" + j1  + "-" + j].intersection[pol1_id + "-" + i1  + "-" + i] = (intersection)
+
+                if (polygons_to_simplify[pol2_id + "-" + j1  + "-" + j].polygon.length > 0) {
+                  polygons_to_simplify[pol2_id + "-" + j1  + "-" + j].polygon = pol2_geom //.push(pol2_geom)
+                }
+              }
+
+            } else {
+
+              var arr = new Array();
+              var intersection_object = new Object();
+              arr.push(intersection);
+              intersection_object[pol1_id + "-" + i1  + "-" + i] = intersection
+
+              polygons_to_simplify[pol2_id + "-" + j1  + "-" + j] = { intersection: intersection_object, polygon: pol2_geom };
+            }
+
+          } else {
+            if (polygons_to_simplify.hasOwnProperty(pol1_id + "-" + i1  + "-" + i)) {
+
+              if (!polygons_to_simplify[pol1_id + "-" + i1  + "-" + i].intersection.hasOwnProperty(pol2_id + "-" + j1  + "-" + j)) {
+
+                if (polygons_to_simplify[pol1_id + "-" + i1  + "-" + i].polygon.length > 0) {
+                  polygons_to_simplify[pol1_id + "-" + i1  + "-" + i].polygon = pol1_geom // .push(pol1_geom)
+                }
+
+              }
+
+            } else {
+
+              var intersection_object = new Object();
+              intersection_object[pol2_id + "-" + j1  + "-" + j] = []
+
+              polygons_to_simplify[pol1_id + "-" + i1  + "-" + i] = { intersection: {}, polygon: pol1_geom };
+
+            }
+          }
+
+        }
+      }
+
+    }
+  }
+
+
+}
 
 function find_intersections(pol1_coord, pol1, pol1_id, pol2_coord, pol2, pol2_id){
 
@@ -523,8 +669,6 @@ function find_intersections(pol1_coord, pol1, pol1_id, pol2_coord, pol2, pol2_id
 
     }
   }
-  
-
   
 }
 
@@ -1384,44 +1528,88 @@ function get_closest_index_test2(array_counter, current_start, current_end, elem
   return { index: closest_index, flip: flip, prepend: prepend}
 }
 
-function json_to_wkt(obj_type, json_data){
+function json_to_wkt(obj_type, json_data, test){
   var polygons_to_join = []
+  
+  console.log(test)
 
   switch(obj_type){
     case "polygon":
-      poly_start = "POLYGON ("
-      poly_end = " )"
+      poly_start = "POLYGON "
+      poly_end = " "
     break
     case "multipolygon":
-      poly_start = "MULTIPOLYGON (("
-      poly_end = "))"
+      poly_start = "MULTIPOLYGON ("
+      poly_end = ")"
     break
   }
 
   polygon = poly_start
 
-  for(poly in json_data){
-    if(json_data.hasOwnProperty(poly)){
-      polygons_to_join.push( '(' + json_data[poly].simplified.map(function(p) {
+  // for(poly in json_data){
+  //   if(json_data.hasOwnProperty(poly)){
+  //     polygons_to_join.push( '(' + json_data[poly].simplified.map(function(p) {
+  //                   return p[0] + ' ' + p[1];
+  //                 }).join(', ') + ')' );
+
+  //   }
+  // }
+   
+  for(poly in test){
+    if(test.hasOwnProperty(poly)){
+      line_rings_to_join = []
+      for(var i = 0; i < test[poly].length; i++){
+        var line_ring = test[poly][i]
+        line_rings_to_join.push( '(' + line_ring.simplified.map(function(p) {
                     return p[0] + ' ' + p[1];
                   }).join(', ') + ')' );
+      }
+      
+      polygons_to_join.push('(' + line_rings_to_join.join(", ") + ')')
+      
+      // polygons_to_join.push( '(' + json_data[poly].simplified.map(function(p) {
+      //               return p[0] + ' ' + p[1];
+      //             }).join(', ') + ')' );
 
     }
   }
 
-  polygon += polygons_to_join.join(", ")
+  polygon += polygons_to_join.join(" , ")
+  
 
   polygon += poly_end
   
+  console.log(polygon)
 
   return polygon
 }
 
 
 
-function display_feature(feature_data, color){
-  map.data.addGeoJson(feature_data);
-
+function display_feature(feature_data, color, test_data_source){
+  try{
+    var data = {
+      type: "Feature",
+      geometry: 
+        feature_data
+      
+    }
+    map.data.addGeoJson(data);
+  }catch(e){
+    console.log(data)
+  }
+  
+  
+  // try{
+  //   var /** Object */ options = {"geometry" : feature_data};
+  //   var feature = new google.maps.Data.Feature(options);
+  //   map.data.add(feature)
+  //   // console.log(feature_data)
+  // }catch(e){
+  //   console.log(feature_data)
+  // }
+  
+  
   map.data.setStyle(function(feature) {
     var opacity = 0.4;
     return ({

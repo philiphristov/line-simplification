@@ -1,4 +1,9 @@
 /**
+ * @module  Geo_Parser
+ */
+//@file Parses Coordinate Objects to Google Maps Geo Objects
+
+/**
  * @param {string} string
  *
  * @return {google.maps.Data.Point}
@@ -47,7 +52,7 @@ function parsePolygon (string) {
 
 	string = string.replace("POLYGON((","");
  	string = string.replace("))","");
-	//console.log(string);
+	
 	return new google.maps.Data.Polygon(parsePolygonCoords(string));
 }
 
@@ -94,14 +99,12 @@ function parsePolygonCoords (string){
 	/**
 	 * @type {Array<string>} 
 	 */
-	//console.log(string);
 	var polygons = string.split("),(");
-	//console.log(polygons);
+
 	for (var /** number */ i = 0; i < polygons.length; i++) {
   		coords[i] = new Array();
   		var values = polygons[i].split(",");
 		for (var /** number */ j = 0; j < values.length; j++) {
-			//console.log(values[j]);
 	 		var /** Array<string> */ coord = values[j].split(" ");
 	 		coords[i].push(new google.maps.LatLng(coord[1] * 1, coord[0] * 1));
 		}

@@ -47,8 +47,18 @@ function parsePolygonArray (string) {
 
 	string = string.replace("POLYGON((","");
  	string = string.replace("))","");
-	//console.log(string);
-	return parsePolygonCoordsArray(string);
+	
+	polygons_arr = string.split("),(")
+
+	var resultList = new Array();
+	for (var i = 0; i < polygons_arr.length; i++) {
+		polygons_arr[i] = polygons_arr[i].replace("((", "");
+		polygons_arr[i] = polygons_arr[i].replace("))", "");
+		resultList.push(parsePolygonCoordsArray(polygons_arr[i]));
+	}
+
+	//return parsePolygonCoordsArray(string);
+	return [resultList];
 }
 
 /**
@@ -58,26 +68,52 @@ function parsePolygonArray (string) {
  */
 
 function parseMultiPolygonArray (string) {
-	string = string.replace("MULTIPOLYGON(((","");
- 	string = string.replace(")))","");
+	// Old Working, with the Error multipolygon
+	// string = string.replace("MULTIPOLYGON(((","");
+ // 	string = string.replace(")))","");
 	
-	/**
-	 * @type {Array<string>} 
-	 */	
+ // 	var polygons = string.split(")),((");
+ 	
+ // 	polygons[0].replace("((", "");
+ // 	polygons[polygons.length-1].replace("))", "");
+ 	
+ // 	var resultList = new Array();
+ 	
+ // 	for (var i = 0; i < polygons.length; i++) {
+	// 	resultList = resultList.concat(parsePolygonCoordsArray(polygons[i]));
+ // 	}
+ // 	return resultList;
+
+
+
+ 	// NEW FOR JSON
+
+	string = string.replace("MULTIPOLYGON(","");
+ 	string = string.slice(0, -1);
+	
  	var polygons = string.split(")),((");
  	
- 	polygons[0].replace("((", "");
- 	polygons[polygons.length-1].replace("))", "");
- 	
- 	/**
- 	 * @type {Array<Array<google.maps.LatLng>>} 
- 	 */
- 	var resultList = new Array();
- 	
- 	for (var i = 0; i < polygons.length; i++) {
-		resultList = resultList.concat(parsePolygonCoordsArray(polygons[i]));
+ 	multipolygon =  new Array();
+
+ 	for(var j = 0; j < polygons.length; j++){
+ 		polygons[j].replace("((", "");
+ 		polygons[j].replace("))", "");
+	
+ 		polygons_arr = polygons[j].split("),(")
+
+ 		var resultList = new Array();
+ 		
+ 		for (var i = 0; i < polygons_arr.length; i++) {
+ 			polygons_arr[i] = polygons_arr[i].replace("((", "");
+ 			polygons_arr[i] = polygons_arr[i].replace("))", "");
+			resultList.push(parsePolygonCoordsArray(polygons_arr[i]));
+ 		}
+
+ 		multipolygon.push(resultList)
+ 		
  	}
- 	return resultList;
+
+ 	return multipolygon;
 }
 
 /**
