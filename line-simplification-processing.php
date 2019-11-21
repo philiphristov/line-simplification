@@ -243,15 +243,17 @@ function get_all_hierarchies(){
 
 	$hierarchy_ids = [];
 
-	if(strcmp($category, "") != 0){
-		$location_data = $db_obj->get_results("SELECT DISTINCT Id_Ueberort FROM orte_hierarchien, orte WHERE orte.Id_Ort = orte_hierarchien.Id_Ueberort AND orte.Id_Kategorie = $category");
-	}else{
-		$location_data = $db_obj->get_results("SELECT DISTINCT Id_Ueberort FROM orte_hierarchien");
+	$location_data = $db_obj->get_results("SELECT DISTINCT Id_Ort FROM orte WHERE orte.Id_Kategorie = $category");
 
-	}
+	// if(strcmp($category, "") != 0){
+	// 	$location_data = $db_obj->get_results("SELECT DISTINCT Id_Ueberort FROM orte_hierarchien, orte WHERE orte.Id_Ort = orte_hierarchien.Id_Ueberort AND orte.Id_Kategorie = $category");
+	// }else{
+	// 	$location_data = $db_obj->get_results("SELECT DISTINCT Id_Ueberort FROM orte_hierarchien");
+
+	// }
 
 	foreach ($location_data as $value) {
-		array_push($hierarchy_ids, $value->Id_Ueberort);
+		array_push($hierarchy_ids, $value->Id_Ort);
 	}
 		
 

@@ -79,15 +79,26 @@ jQuery(document).ready(function(){
     polygon_category = jQuery("#location_category").val();
     epsilon_value = jQuery("#epsilon_factor").val();
 
+    var file_name;
+    switch(polygon_category){
+      case "60":
+        file_name = "neighbours_60_all.txt"
+      break;
+      case "62":
+        file_name = "neighbours_62_all.txt"
+      break;
+      default:
+        file_name = ""
 
-    jQuery.getJSON( url.plugins_Url + "neighbours_60_all.txt", function(json) {
-      // console.log(json);
-      
+    }
+    console.log(url.plugins_Url + file_name)
+
+    jQuery.getJSON( url.plugins_Url + file_name, function(json) {      
       json_processed_polygons = json
-
       init_polygons_simplification(polygon_category)
-
     });
+    
+
   })
 
 })
@@ -110,6 +121,10 @@ function init_polygons_simplification(category){
 
          }
        })
+
+  // next_hierarchy_index = 0
+
+  // get_corresponding_polygons([json_processed_polygons[next_hierarchy_index]], json_processed_polygons[hierarchies[next_hierarchy_index]])
 }
 
 var helper_obj = {}
@@ -126,7 +141,7 @@ function get_corresponding_polygons(polygon_id, polygon_id_array) {
 
       locations_info = JSON.parse(result)
 
-      console.log(polygon_id)
+      // console.log(polygon_id)
 
       helper_obj = {}
 
@@ -190,7 +205,7 @@ function get_corresponding_polygons(polygon_id, polygon_id_array) {
 
 function rebuild_polygons_json(polygon_id) {
   // console.log(polygon_id)
-  console.log(polygons_to_simplify)
+  // console.log(polygons_to_simplify)
 
   for (poly_id in polygons_to_simplify) {
     if (poly_id.includes(polygon_id)) {
@@ -1531,7 +1546,7 @@ function get_closest_index_test2(array_counter, current_start, current_end, elem
 function json_to_wkt(obj_type, json_data, test){
   var polygons_to_join = []
   
-  console.log(test)
+  // console.log(test)
 
   switch(obj_type){
     case "polygon":
@@ -1579,7 +1594,7 @@ function json_to_wkt(obj_type, json_data, test){
 
   polygon += poly_end
   
-  console.log(polygon)
+  // console.log(polygon)
 
   return polygon
 }
