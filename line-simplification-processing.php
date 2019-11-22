@@ -34,7 +34,14 @@ function get_corresponding_polygons(){
 	global $db_obj;
 
 	$polygon_id = $_REQUEST['polygon_id'];
-	$polygon_arr = $_REQUEST['polygon_id_array'];
+
+	if(isset($_REQUEST['polygon_id_array'])){
+		$polygon_arr = $_REQUEST['polygon_id_array'];
+	}else{
+		$polygon_arr = [];	
+	}
+	
+
 
 	$polygon_ids = array_merge($polygon_id, $polygon_arr);
 
