@@ -146,6 +146,8 @@ function get_corresponding_polygons(polygon_id, polygon_id_array) {
       polygon_id_array: polygon_id_array
     },
     success: function(result) {
+      
+      console.log(polygon_id)
 
       locations_info = JSON.parse(result)
 
@@ -320,11 +322,11 @@ function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_locati
       console.log("hierarchy polygons:");
 
       locations_info.map(function(location_data) {
-        location_data['parsed_coords'] = parseGeoDataArray(location_data.coordinates)
+        location_data['parsed_coords'] = parseGeoDataArray(location_data.coordinates)[0][0]
         location_data['parsed_poly'] = turf.polygon(location_data['parsed_coords'])
       })
 
-      console.log(locations_info);
+      // console.log(locations_info);
 
       polygons_to_simplify = {}
 
@@ -347,7 +349,6 @@ function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_locati
 
       } else if (locations_info.length == 1) {
         var pol_coord = parseGeoDataArray(locations_info[0].coordinates)
-        console.log(pol_coord)
         polygon_id = locations_info[0].id
 
         for (var i = 0; i < pol_coord.length; i++) {
@@ -489,7 +490,7 @@ function rebuild_polygons() {
       }
     }
 
-    var wkt_data = json_to_wkt(geo_type, geo_objects)
+    var wkt_data = json_to_wkt_hierarchie_parsing(geo_type, geo_objects)
 
     to_save_in_db.push({ id: cur_id, location_data: wkt_data, epsilon: epsilon_value })
 
@@ -1376,6 +1377,60 @@ function json_to_wkt(obj_type, json_data, test) {
 
     }
   }
+
+  polygon += polygons_to_join.join(" , ")
+
+
+  polygon += poly_end
+
+  // console.log(polygon)
+
+  return polygon
+}
+
+
+function json_to_wkt_hierarchie_parsing(obj_type, json_data) {
+  var polygons_to_join = []
+
+  console.log(json_data)
+
+  switch (obj_type) {
+    case "polygon":
+      poly_start = "POLYGON "
+      poly_end = " "
+      break
+    case "multipolygon":
+      poly_start = "MULTIPOLYGON ("
+      poly_end = ")"
+      break
+  }
+
+  polygon = poly_start
+
+
+  for(poly in json_data){
+    if(json_data.hasOwnProperty(poly)){
+      polygons_to_join.push( '((' + json_data[poly].simplified.map(function(p) {
+                    return p[0] + ' ' + p[1];
+                  }).join(', ') + '))' );
+
+    }
+  }
+
+  // for (poly in test) {
+  //   if (test.hasOwnProperty(poly)) {
+  //     line_rings_to_join = []
+  //     for (var i = 0; i < test[poly].length; i++) {
+  //       var line_ring = test[poly][i]
+  //       line_rings_to_join.push('(' + line_ring.simplified.map(function(p) {
+  //         return p[0] + ' ' + p[1];
+  //       }).join(', ') + ')');
+  //     }
+
+  //     polygons_to_join.push('(' + line_rings_to_join.join(", ") + ')')
+
+  //   }
+  // }
 
   polygon += polygons_to_join.join(" , ")
 
