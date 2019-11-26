@@ -135,8 +135,6 @@ function init_polygons_simplification(category) {
 
 }
 
-var helper_obj = {}
-
 function get_corresponding_polygons(polygon_id, polygon_id_array) {
   jQuery.ajax({
     url: ajaxurl,
@@ -151,14 +149,8 @@ function get_corresponding_polygons(polygon_id, polygon_id_array) {
 
       locations_info = JSON.parse(result)
 
-      helper_obj = {}
-
       locations_info.map(function(location_data) {
-
         location_data['parsed_coords'] = parseGeoDataArray(location_data.coordinates)
-        helper_obj[location_data.id] = location_data['parsed_coords'].length
-
-        location_data['parsed_poly'] = []
 
       })
 
@@ -172,13 +164,19 @@ function get_corresponding_polygons(polygon_id, polygon_id_array) {
       polygon1_coords = locations_info[searched_poly].parsed_coords
       polygon1_id = locations_info[searched_poly].id
 
-      for (var j = 0; j < locations_info.length; j++) {
-        if (searched_poly != j) {
-          polygon2_id = locations_info[j].id
-          polygon2_coords = locations_info[j].parsed_coords
+      if(locations_info.length > 1){
 
-          find_intersections_json(polygon1_coords, polygon2_coords, polygon1_id, polygon2_id)
+        for (var j = 0; j < locations_info.length; j++) {
+          if (searched_poly != j) {
+            polygon2_id = locations_info[j].id
+            polygon2_coords = locations_info[j].parsed_coords
+
+            find_intersections_json(polygon1_coords, polygon2_coords, polygon1_id, polygon2_id)
+          }
         }
+
+      }else{
+        fill_no_intersections_poly_json(polygon1_coords, polygon1_id)
       }
 
       rebuild_polygons_json(polygon_id)
@@ -591,6 +589,37 @@ function find_intersections_json(pol1_coord, pol2_coord, pol1_id, pol2_id) {
 
 }
 
+function fill_no_intersections_poly_json(pol1_coord, pol1_id) {
+
+  for (var i1 = 0; i1 < pol1_coord.length; i1++) {
+    var line_ring_pol1 = pol1_coord[i1]
+
+    for (var i = 0; i < line_ring_pol1.length; i++) {
+      var pol1_geom = turf.polygon(line_ring_pol1[i]);
+
+      if (polygons_to_simplify.hasOwnProperty(pol1_id + "-" + i1 + "-" + i)) {
+
+        if (!polygons_to_simplify[pol1_id + "-" + i1 + "-" + i].intersection.hasOwnProperty(pol2_id + "-" + j1 + "-" + j)) {
+
+          if (polygons_to_simplify[pol1_id + "-" + i1 + "-" + i].polygon.length > 0) {
+            polygons_to_simplify[pol1_id + "-" + i1 + "-" + i].polygon = pol1_geom
+          }
+
+        }
+
+      } else {
+
+        var intersection_object = new Object();
+
+        polygons_to_simplify[pol1_id + "-" + i1 + "-" + i] = { intersection: {}, polygon: pol1_geom };
+
+      }
+
+    }
+
+  }
+}
+
 function find_intersections(pol1_coord, pol1, pol1_id, pol2_coord, pol2, pol2_id) {
 
   for (var i = 0; i < pol1_coord.length; i++) {
@@ -979,7 +1008,8 @@ function linestrings_to_polygon(feature_array) {
         var polygon = turf.polygon([ordered_linestrings])
       } catch (e) {
         console.log(e)
-        console.log(ordered_linestrings)
+        console.log(polygons_to_simplify)
+        console.log(coordinates_array)
         ordered_linestrings = null
       }
 
