@@ -42,6 +42,7 @@ jQuery(document).ready(function() {
     } else {
       jQuery("#location_category").val("");
       jQuery("#epsilon_factor").val("");
+      alert("incorrect values")
     }
 
   })
@@ -59,27 +60,15 @@ jQuery(document).ready(function() {
     specific_location_hierarchy = jQuery("#specific_location_hierarchy_id").val();
     all_locations = jQuery("#all_locations").is(":checked")
 
-    if (polygon_category && epsilon_value) {
-      get_all_hierarchies(callback, polygon_category)
-      // if(all_locations){
-      //   var callback = function(specific_location_hierarchy){
-      //     parse_hierarchy_polygons("",epsilon_value,"",specific_location_hierarchy)
-      //   }
-      //   get_all_hierarchies(callback, polygon_category)
-      // }else{
-      //   parse_hierarchy_polygons(polygon_category,epsilon_value,"",[])
-      // }
-    } else if ((specific_location || specific_location_hierarchy) && epsilon_value) {
-      parse_hierarchy_polygons(polygon_category, epsilon_value, specific_location, specific_location_hierarchy.split(","));
-    } else if (all_locations) {
-      var callback = function(specific_location_hierarchy) {
-        parse_hierarchy_polygons("", epsilon_value, "", specific_location_hierarchy)
-      }
-      get_all_hierarchies(callback, "")
-
+    /**
+     * simplify single polygons or polygons corresponding to a single hierarchy, or multiple hierarhies separated with comma
+     */
+    if ((specific_location || specific_location_hierarchy) && epsilon_value) {
+      parse_hierarchy_polygons(epsilon_value, specific_location, specific_location_hierarchy.split(","));
     } else {
       jQuery("#location_category").val("");
       jQuery("#epsilon_factor").val("");
+      alert("incorrect values")
     }
 
   })
@@ -93,17 +82,8 @@ jQuery(document).ready(function() {
     epsilon_value = jQuery("#epsilon_factor").val();
 
     var file_name;
-    switch (polygon_category) {
-      case "60":
-        file_name = "neighbours_60_all.txt"
-        break;
-      case "62":
-        file_name = "neighbours_62_all.txt"
-        break;
-      default:
-        file_name = ""
 
-    }
+    file_name = "neighbours_" + polygon_category + "_all.txt"
 
     jQuery.getJSON(url.plugins_Url + file_name, function(json) {
       json_processed_polygons = json
@@ -305,40 +285,45 @@ function get_all_hierarchies(parse_data_callback, category) {
 }
 
 
-function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_location, specific_location_hierarchy) {
+function parse_hierarchy_polygons(epsilon_val, specific_location, specific_location_hierarchy) {
   console.log("GETTING POLYGONS FOR HIERARCHY ID: " + specific_location_hierarchy)
   jQuery.ajax({
     url: ajaxurl,
     data: {
       action: "get_hierarchy_polygons",
-      polygon_category: polygon_category,
       specific_location: specific_location,
       specific_location_hierarchy: specific_location_hierarchy
     },
     success: function(result) {
       locations_info = JSON.parse(result);
       console.log("hierarchy polygons:");
+      console.log(locations_info);
+
 
       locations_info.map(function(location_data) {
-        location_data['parsed_coords'] = parseGeoDataArray(location_data.coordinates)[0][0]
-        location_data['parsed_poly'] = turf.polygon(location_data['parsed_coords'])
+        location_data['parsed_coords'] = parseGeoDataArray(location_data.coordinates)
+        // location_data['parsed_poly'] = turf.polygon(location_data['parsed_coords'])
       })
 
-      // console.log(locations_info);
 
       polygons_to_simplify = {}
 
       if (locations_info.length > 1) {
+
         for (var i = 0; i < locations_info.length; i++) {
           polygon1_coords = locations_info[i].parsed_coords;
           polygon1_id = locations_info[i].id;
-          poly1 = locations_info[i].parsed_poly
+          // poly1 = locations_info[i].parsed_poly
           for (var j = 0; j < locations_info.length; j++) {
             if (i != j) {
               polygon2_coords = locations_info[j].parsed_coords;
               polygon2_id = locations_info[j].id;
-              poly2 = locations_info[j].parsed_poly
-              find_intersections(polygon1_coords, poly1, polygon1_id, polygon2_coords, poly2, polygon2_id);
+              // poly2 = locations_info[j].parsed_poly
+              // find_intersections(polygon1_coords, poly1, polygon1_id, polygon2_coords, poly2, polygon2_id);
+              // console.log(polygon1_coords)
+              // console.log(polygon2_coords)
+              find_intersections_json(polygon1_coords, polygon2_coords, polygon1_id, polygon2_id)
+
             }
           }
         }
@@ -346,21 +331,18 @@ function parse_hierarchy_polygons(polygon_category, epsilon_val, specific_locati
         rebuild_polygons();
 
       } else if (locations_info.length == 1) {
+
+        var polygon1_id = locations_info[0].id
         var pol_coord = parseGeoDataArray(locations_info[0].coordinates)
-        polygon_id = locations_info[0].id
 
-        for (var i = 0; i < pol_coord.length; i++) {
-          var pol_geom = turf.polygon([pol_coord[i]]);
-
-          polygons_to_simplify[polygon_id + "-" + i] = { intersection: {}, polygon: pol_geom }
-        }
+        fill_no_intersections_poly_json(pol_coord, polygon1_id)
 
         rebuild_polygons()
       } else {
         if (hierarchies.length > 0) {
           next_hierarchy_index++
           if (hierarchies[next_hierarchy_index]) {
-            parse_hierarchy_polygons("", epsilon_value, "", [hierarchies[next_hierarchy_index]]);
+            parse_hierarchy_polygons(epsilon_value, "", [hierarchies[next_hierarchy_index]]);
           }
         }
       }
@@ -395,7 +377,6 @@ function request_and_display_gemeinden(polygon_category, epsilon_value, specific
     success: function(result) {
 
       var arr_data = JSON.parse(result);
-      console.log(arr_data)
 
       if (arr_data.length == 0) {
         alert('No Data Found')
@@ -446,7 +427,7 @@ function send_to_db(geo_data_to_save) {
       if (hierarchies.length > 0) {
         next_hierarchy_index++
         if (hierarchies[next_hierarchy_index]) {
-          parse_hierarchy_polygons("", epsilon_value, "", [hierarchies[next_hierarchy_index]]);
+          parse_hierarchy_polygons(epsilon_value, "", [hierarchies[next_hierarchy_index]]);
         }
       }
     }
@@ -801,7 +782,7 @@ function new_simplify_and_perserve(multipolygon, intersections) {
 
           var current_line = line_coordinates[line];
 
-          if (true) { //  current_line.length > 10
+          if (current_line.length > 10) { // true
             var simplify_ = simplify(current_line, epsilon_value, true)
           } else {
             var simplify_ = current_line
@@ -809,7 +790,6 @@ function new_simplify_and_perserve(multipolygon, intersections) {
 
           var line_string = turf.lineString(simplify_, options)
 
-          // reconstructed_polygon.push(line_string)
           reconstructed_polygon.push(simplify_)
         } else {
           var current_line = line_coordinates[line]
@@ -832,16 +812,19 @@ function new_simplify_and_perserve(multipolygon, intersections) {
 
         if (simplify_) {
           if (simplify_.length >= 2) {
-            try {
-              var line_string = turf.lineString(simplify_)
-              // reconstructed_polygon.push(line_string);  
-              reconstructed_polygon.push(simplify_);
-            } catch (e) {
-              console.log(e)
-              var line_string = turf.lineString([simplify_, simplify_])
-              // reconstructed_polygon.push(line_string); 
-              reconstructed_polygon.push([simplify_, simplify_]);
-            }
+            // if (simplify_.length > 10) { // true
+
+              try {
+                var line_string = turf.lineString(simplify_)
+                reconstructed_polygon.push(simplify_);
+              } catch (e) {
+                console.log(e)
+                var line_string = turf.lineString([simplify_, simplify_])
+                reconstructed_polygon.push([simplify_, simplify_]);
+              }
+            // } else {
+            //   reconstructed_polygon.push(simplify_);
+            // }
           }
         }
 
@@ -1368,8 +1351,6 @@ function get_closest_index_test2(array_counter, current_start, current_end, elem
 function json_to_wkt(obj_type, json_data, test) {
   var polygons_to_join = []
 
-  // console.log(test)
-
   switch (obj_type) {
     case "polygon":
       poly_start = "POLYGON "
@@ -1383,15 +1364,6 @@ function json_to_wkt(obj_type, json_data, test) {
 
   polygon = poly_start
 
-
-  // for(poly in json_data){
-  //   if(json_data.hasOwnProperty(poly)){
-  //     polygons_to_join.push( '(' + json_data[poly].simplified.map(function(p) {
-  //                   return p[0] + ' ' + p[1];
-  //                 }).join(', ') + ')' );
-
-  //   }
-  // }
 
   for (poly in test) {
     if (test.hasOwnProperty(poly)) {
@@ -1413,16 +1385,12 @@ function json_to_wkt(obj_type, json_data, test) {
 
   polygon += poly_end
 
-  // console.log(polygon)
-
   return polygon
 }
 
 
 function json_to_wkt_hierarchie_parsing(obj_type, json_data) {
   var polygons_to_join = []
-
-  console.log(json_data)
 
   switch (obj_type) {
     case "polygon":
@@ -1447,27 +1415,10 @@ function json_to_wkt_hierarchie_parsing(obj_type, json_data) {
     }
   }
 
-  // for (poly in test) {
-  //   if (test.hasOwnProperty(poly)) {
-  //     line_rings_to_join = []
-  //     for (var i = 0; i < test[poly].length; i++) {
-  //       var line_ring = test[poly][i]
-  //       line_rings_to_join.push('(' + line_ring.simplified.map(function(p) {
-  //         return p[0] + ' ' + p[1];
-  //       }).join(', ') + ')');
-  //     }
-
-  //     polygons_to_join.push('(' + line_rings_to_join.join(", ") + ')')
-
-  //   }
-  // }
-
   polygon += polygons_to_join.join(" , ")
 
 
   polygon += poly_end
-
-  // console.log(polygon)
 
   return polygon
 }
@@ -1485,17 +1436,6 @@ function display_feature(feature_data, color, test_data_source) {
   } catch (e) {
     console.log(data)
   }
-
-
-  // try{
-  //   var /** Object */ options = {"geometry" : feature_data};
-  //   var feature = new google.maps.Data.Feature(options);
-  //   map.data.add(feature)
-  //   // console.log(feature_data)
-  // }catch(e){
-  //   console.log(feature_data)
-  // }
-
 
   map.data.setStyle(function(feature) {
     var opacity = 0.4;

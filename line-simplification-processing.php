@@ -152,7 +152,6 @@ add_action('wp_ajax_get_hierarchy_polygons', 'get_hierarchy_polygons');
 function get_hierarchy_polygons(){
 	global $db_obj;
 
-	$polygon_category = $_REQUEST["polygon_category"];
 	$loc_id = $_REQUEST["specific_location"];
 	$specific_location_hierarchy = $_REQUEST["specific_location_hierarchy"];
 
@@ -161,8 +160,6 @@ function get_hierarchy_polygons(){
 		$location_data = $db_obj->get_results("SELECT Id_Ort, ST_AsText(orte.Geodaten)  as coordinates FROM orte WHERE Id_Ort = $loc_id");
 	}else if(!empty($specific_location_hierarchy)){
 		$location_data = $db_obj->get_results("SELECT o.Id_Ort, ST_AsText(o.Geodaten) as coordinates FROM orte o join orte_hierarchien o_h on o.Id_Ort = o_h.Id_Ort WHERE Id_Ueberort in ( " . implode(", ", $specific_location_hierarchy) . " )");
-	}else if(strcmp($polygon_category, "") != 0){
-		$location_data = $db_obj->get_results("SELECT Id_Ort, ST_AsText(orte.Geodaten) as coordinates FROM orte WHERE Id_Kategorie = $polygon_category");
 	}
 	
 	$json_data = [];
