@@ -805,3 +805,194 @@ function remove_start_end_arr(arr_intersection){
   }
   return arr_intersection;
 }
+
+
+/**
+ *
+ * 
+ */
+
+
+function get_closest_index(current_index, current_start, current_end, elements_array, array_counter) {
+
+  closest_index_start_to_start = 0
+  current_distance_start_to_start = 100
+
+  closest_index_start_to_end = 0
+  current_distance_start_to_end = 100
+
+  //
+
+  closest_index_end_to_start = 0
+  current_distance_end_to_start = 100
+
+  closest_index_end_to_end = 0
+  current_distance_end_to_end = 100
+
+
+  current_start_point = turf.point(current_start)
+
+  current_end_point = turf.point(current_end)
+
+  for (var i = 0; i < elements_array.length; i++) {
+    if (current_index != i) {
+
+      searched_element_start_point = turf.point(elements_array[i][0])
+      searched_element_end_point = turf.point(elements_array[i][elements_array[i].length - 1])
+
+      distance_start_to_start = turf.distance(current_start_point, searched_element_start_point)
+      distance_start_to_end = turf.distance(current_start_point, searched_element_end_point)
+
+      distance_end_to_start = turf.distance(current_end_point, searched_element_start_point)
+      distance_end_to_end = turf.distance(current_end_point, searched_element_end_point)
+
+      if ((distance_start_to_start < current_distance_start_to_start) && !array_counter.includes(i)) {
+        current_distance_start_to_start = distance_start_to_start
+        closest_index_start_to_start = i
+      }
+
+      if ((distance_start_to_end < current_distance_start_to_end) && !array_counter.includes(i)) {
+        current_distance_start_to_end = distance_start_to_end
+        closest_index_start_to_end = i
+      }
+
+      if ((distance_end_to_start < current_distance_end_to_start) && !array_counter.includes(i)) {
+        current_distance_end_to_start = distance_end_to_start
+        closest_index_end_to_start = i
+      }
+
+      if ((distance_end_to_end < current_distance_end_to_end) && !array_counter.includes(i)) {
+        current_distance_end_to_end = distance_end_to_end
+        closest_index_end_to_end = i
+      }
+
+    }
+  }
+
+  closest_start_distance = 10000000
+  if (current_distance_start_to_end < current_distance_start_to_start) {
+    closest_index_start = closest_index_start_to_end
+    closest_start_distance = current_distance_start_to_end
+    // flip = false
+  } else {
+    closest_index_start = closest_index_start_to_start
+    closest_start_distance = current_distance_start_to_start
+    // flip = true
+  }
+
+  closest_end_distance = 10000000
+  if (current_distance_end_to_end < current_distance_end_to_start) {
+    closest_index_end = closest_index_end_to_end
+    closest_end_distance = current_distance_end_to_end
+    // flip = true
+  } else {
+    closest_index_end = closest_index_end_to_start
+    closest_end_distance = current_distance_end_to_start
+    // flip = false
+  }
+
+  if (closest_end_distance < closest_start_distance) {
+    closest_index = closest_index_end
+    prepend = false
+
+    if (current_distance_end_to_end < current_distance_end_to_start) {
+      flip = true
+    } else {
+      flip = false
+    }
+
+  } else if (closest_end_distance > closest_start_distance) {
+    closest_index = closest_index_start
+    prepend = true
+
+    if (current_distance_start_to_end < current_distance_start_to_start) {
+      flip = true
+    } else {
+      flip = false
+    }
+
+  } else {
+    closest_index = closest_index_end
+    prepend = false
+
+    if (current_distance_end_to_end < current_distance_end_to_start) {
+      flip = true
+    } else {
+      flip = false
+    }
+
+  }
+
+
+
+  return { index: closest_index, flip: flip, prepend: prepend }
+}
+
+function get_closest_index_test(current_index, current_start, current_end, elements_array, array_counter) {
+
+  current_start_point = turf.point(current_start)
+
+  current_end_point = turf.point(current_end)
+
+  flip = false
+  prepend = false
+  next_index = 0
+
+  for (var i = 0; i < elements_array.length; i++) {
+    if (current_index != i) {
+
+      if (current_start == elements_array[i][0]) {
+        next_index = i
+        flip = true
+        prepend = true
+      }
+
+      if (current_start == elements_array[i][elements_array[i].length - 1]) {
+        next_index = i
+        flip = false
+        prepend = true
+      }
+
+      if (current_end_point == elements_array[i][0]) {
+        next_index = i
+        flip = false
+        prepend = false
+      }
+
+      if (current_end_point == elements_array[i][elements_array[i].length - 1]) {
+        next_index = i
+        flip = true
+        prepend = false
+      }
+
+    }
+  }
+
+  if (next_index == 0) {
+    return get_closest_index(current_index, current_start, current_end, elements_array, array_counter)
+  }
+
+  return { index: next_index, flip: flip, prepend: prepend }
+}
+
+function get_all_hierarchies(parse_data_callback, category) {
+  jQuery.ajax({
+    url: ajaxurl,
+    data: {
+      action: "get_all_hierarchies",
+      category: category
+    },
+    success: function(result) {
+      hierarchies = JSON.parse(result)
+      console.log(hierarchies)
+      // parse_data_callback([hierarchies[0]])
+
+      // next_hierarchy_index = 1
+      // for(var i = 0; i < hierarchies.length; i++){
+      //   polygons_to_simplify = {}
+      //   setTimeout(function () { ), i * 10000 })
+      // }
+    }
+  })
+
+}
