@@ -19,6 +19,8 @@ jQuery(document).ready(function() {
     specific_location_hierarchy_id = jQuery("#specific_location_hierarchy_id").val().split(',');
     all_locations = jQuery("#all_locations").is(":checked")
 
+    jQuery("#loading").prepend(jQuery("<h3>").text("Loading Data...").attr("id", "loading_div"))
+
     if (all_locations) {
       /**
        * Display All Polygons with specific Epsilon
@@ -45,6 +47,7 @@ jQuery(document).ready(function() {
       alert("incorrect values")
     }
 
+    
   })
 
 
@@ -177,7 +180,7 @@ function rebuild_polygons_json(polygon_id) {
       if (polygons_to_simplify[poly_id]['simplified']) {
       } else {
         polygons_to_simplify[poly_id]['simplified'] = polygon.geometry.coordinates[0]
-        console.log("Not simplified")
+        console.log("Not simplified: " + poly_id)
       }
     }
   }
@@ -377,9 +380,12 @@ function request_and_display_gemeinden(polygon_category, epsilon_value, specific
     success: function(result) {
 
       var arr_data = JSON.parse(result);
+      
+      
 
       if (arr_data.length == 0) {
         alert('No Data Found')
+        jQuery("#loading_div").remove()
       }
       //remove old polygons
       map.data.forEach(function(feature) {
@@ -403,6 +409,8 @@ function request_and_display_gemeinden(polygon_category, epsilon_value, specific
         display_feature(geojson, "red", el.coord)
 
       }
+
+      jQuery("#loading_div").remove()
 
 
     }
@@ -990,9 +998,9 @@ function linestrings_to_polygon(feature_array) {
         }
         var polygon = turf.polygon([ordered_linestrings])
       } catch (e) {
-        console.log(e)
-        console.log(polygons_to_simplify)
-        console.log(coordinates_array)
+        // console.log(e)
+        // console.log(polygons_to_simplify)
+        // console.log(coordinates_array)
         ordered_linestrings = null
       }
 

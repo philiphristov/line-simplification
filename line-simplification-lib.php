@@ -33,7 +33,7 @@ function pol_simpl_scripts($hook) {
     wp_enqueue_script( 'line_simpl', plugins_url('line-simplification') . '/js/old/line_simplification.js' );
     wp_enqueue_script( 'req_data', plugins_url('line-simplification') . '/js/polygon_simplification.js' );
     wp_enqueue_script( 'turf_min', plugins_url('line-simplification') . '/js/turf.min.js' );
-    wp_enqueue_script( 'simplify', plugins_url('line-simplification') . '/js/old/simplify.js' );
+    wp_enqueue_script( 'simplify', plugins_url('line-simplification') . '/js/simplify.js' );
 
     wp_localize_script('req_data','url',array('plugins_Url'=>plugin_dir_url(__FILE__)));
 
