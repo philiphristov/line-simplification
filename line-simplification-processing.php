@@ -1,8 +1,11 @@
 <?php
 /* 
-Hadling Ajax request from request_data.js
+Handling Ajax request from request_data.js
 */
 
+/**
+ * Get All polygons in specific category
+ */
 add_action('wp_ajax_nopriv_get_polygon_data', 'get_polygon_data');
 add_action('wp_ajax_get_polygon_data', 'get_polygon_data');
 function get_polygon_data(){
@@ -27,7 +30,9 @@ function get_polygon_data(){
 	wp_die();
 }
 
-
+/**
+ * Get All polygons data from an array of polygon ids
+ */
 add_action('wp_ajax_nopriv_get_corresponding_polygons', 'get_corresponding_polygons');
 add_action('wp_ajax_get_corresponding_polygons', 'get_corresponding_polygons');
 function get_corresponding_polygons(){
@@ -62,6 +67,14 @@ function get_corresponding_polygons(){
 	wp_die();
 }
 
+/**
+ * Gets Simplified Polygons from polygone_vereinfacht Table 
+ * An epsilon needs to be specified along as searched polygon id/category
+ * Possible Search options:
+ * By polygon ID
+ * By polygon Hierarchy (Id Ueberort)
+ * By Polygon category
+ */
 add_action('wp_ajax_nopriv_get_simpl_polygon_data', 'get_simpl_polygon_data');
 add_action('wp_ajax_get_simpl_polygon_data', 'get_simpl_polygon_data');
 function get_simpl_polygon_data(){
@@ -117,7 +130,12 @@ function get_simpl_polygon_data(){
 }
 
 
-
+/**
+ * Get Array of Polygon Ids that satisfy the search createria:
+ * Polygon Id
+ * location hierarchy
+ * location category
+ */
 add_action('wp_ajax_nopriv_send_location_info', 'send_location_info');
 add_action('wp_ajax_send_location_info', 'send_location_info');
 function send_location_info(){
@@ -146,7 +164,11 @@ function send_location_info(){
 	wp_die();
 }
 
-
+/**
+ * Get Polygon ID and Coordinates by:
+ * location id
+ * location hierarchie
+ */
 add_action('wp_ajax_nopriv_get_hierarchy_polygons', 'get_hierarchy_polygons');
 add_action('wp_ajax_get_hierarchy_polygons', 'get_hierarchy_polygons');
 function get_hierarchy_polygons(){
@@ -176,7 +198,9 @@ function get_hierarchy_polygons(){
 	wp_die();
 }
 
-
+/**
+ * Get Single polygon Data by ID
+ */
 add_action('wp_ajax_nopriv_send_json', 'send_json');
 add_action('wp_ajax_send_json', 'send_json');
 function send_json(){
@@ -205,7 +229,9 @@ function send_json(){
 
 
 
-
+/**
+ * Save simplified polygons in Table `polygone_vereinfacht`
+ */
 add_action('wp_ajax_nopriv_save_to_database', 'save_to_database');
 add_action('wp_ajax_save_to_database', 'save_to_database');
 function save_to_database(){
@@ -230,15 +256,13 @@ function save_to_database(){
 		$db_obj->query($sql);
 	}
 
-	
-
-	
-
-
 	echo json_encode("saved");
 	wp_die();
 }
 
+/**
+ * Get Array of polygon Ids from a specific category
+ */
 add_action('wp_ajax_nopriv_get_all_hierarchies', 'get_all_hierarchies');
 add_action('wp_ajax_get_all_hierarchies', 'get_all_hierarchies');
 function get_all_hierarchies(){

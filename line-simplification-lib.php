@@ -1,6 +1,9 @@
 <?php
 
-//localhost db
+/**
+ * Specify Database Connection
+ * @var wpdb
+ */
 $db_obj = new wpdb("root", "", "va_test", "localhost");
 
 add_action('admin_menu', 'init_line_simplification_menu');
