@@ -164,6 +164,33 @@ function send_location_info(){
 	wp_die();
 }
 
+add_action('wp_ajax_nopriv_get_ueberort_by_category', 'get_ueberort_by_category');
+add_action('wp_ajax_get_ueberort_by_category', 'get_ueberort_by_category');
+function get_ueberort_by_category(){
+	global $db_obj;
+
+	$polygon_category = $_REQUEST["category"];
+
+	$location_data = $db_obj->get_results("SELECT  DISTINCT orte_hierarchien.Id_Ueberort as id_ueberort FROM `orte` 
+		JOIN orte_hierarchien ON orte.Id_Ort = orte_hierarchien.Id_Ort 
+		Where orte.Id_Kategorie = $polygon_category"); // orte_hierarchien.Id_Ort as id_ort,
+
+	$json_data = [];
+
+	foreach ($location_data as $value) {
+		// if (array_key_exists($value->id_ueberort, $json_data)){
+		// 	array_push($json_data[$value->id_ueberort], $value->id_ort);
+		// }else{
+		// 	$json_data[$value->id_ueberort] = [$value->id_ort];
+		// }
+		array_push($json_data, $value->id_ueberort);
+	}
+
+	echo json_encode($json_data);
+	wp_die();
+}
+
+
 /**
  * Get Polygon ID and Coordinates by:
  * location id
@@ -237,12 +264,15 @@ add_action('wp_ajax_save_to_database', 'save_to_database');
 function save_to_database(){
 	global $db_obj;
 
+	set_time_limit(500);
 	//INSERT INTO polygone_vereinfacht (Id_Ort, Geodaten,Epsilon) VALUES ($loc_id, ST_GeomFromText($location_data),$epsilon)
 	// $id_data = $_REQUEST["id_data"];
 	// $location_data = (string) stripcslashes((string)$_REQUEST["location_data"]);
 	// $epsilon = $_REQUEST["epsilon"];
 
 	$geo_data_array = json_decode(stripslashes($_REQUEST["geo_data_to_save"]), true)['locations_data'];
+
+	$query_status = "";
 
 	for ($i=0; $i < count($geo_data_array) ; $i++) { 
 		$geo_data = $geo_data_array[$i];
@@ -251,12 +281,27 @@ function save_to_database(){
 		$location_data = $geo_data["location_data"];
 		$epsilon  	   = $geo_data["epsilon"];
 
-		$sql = ("INSERT INTO `polygone_vereinfacht` (`Id_Ort`, `Geodaten`, `Epsilon`, `Mittelpunkt`) values ($id_data, ST_GeomFromText('".$location_data."'), $epsilon, ST_Centroid(ST_GeomFromText('".$location_data."')))");
+		$latest_id = $id_data;
+		
+		if (check_polygon_exists($id_data, $epsilon)){
+			$sql = ("UPDATE `polygone_vereinfacht` SET 
+				`Id_Ort` = $id_data,
+				`Geodaten` = ST_GeomFromText('".$location_data."'),
+				`Epsilon` = $epsilon,
+				`Mittelpunkt`=  ST_Centroid(ST_GeomFromText('".$location_data."')) 
+				 WHERE polygone_vereinfacht.Id_Ort = $id_data LIMIT 1 " );
+				error_log(print_r("Updating Polygon Data $id_data", true));
+		}else{
+			$sql = ("INSERT INTO `polygone_vereinfacht` (`Id_Ort`, `Geodaten`, `Epsilon`, `Mittelpunkt`) values ($id_data, ST_GeomFromText('".$location_data."'), $epsilon, ST_Centroid(ST_GeomFromText('".$location_data."')))" );
+			error_log(print_r("Creating Polygon Data $id_data", true));
+		}
 
-		$db_obj->query($sql);
+		
+
+		$query_status = $db_obj->query($sql);
 	}
 
-	echo json_encode("saved");
+	echo json_encode([$query_status,$latest_id ]);
 	wp_die();
 }
 
@@ -287,4 +332,17 @@ function get_all_hierarchies(){
 
 	echo json_encode($hierarchy_ids);
 	wp_die();
+}
+
+function check_polygon_exists($polygon_id, $epsilon){
+	global $db_obj;
+	$already_exists = false;
+
+	$location_check = $db_obj->get_results("SELECT Id_Ort FROM polygone_vereinfacht WHERE polygone_vereinfacht.Id_Ort = $polygon_id AND polygone_vereinfacht.Epsilon = $epsilon ");
+
+	if (!empty($location_check)) {
+		$already_exists = true;
+	}
+
+	return $already_exists;
 }

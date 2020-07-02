@@ -80,11 +80,15 @@ jQuery(document).ready(function() {
     specific_location_hierarchy = jQuery("#specific_location_hierarchy_id").val();
     all_locations = jQuery("#all_locations").is(":checked")
 
+    console.log(polygon_category)
+    console.log(epsilon_value)
     /**
      * simplify single polygon or polygons corresponding to a single hierarchy, or multiple hierarhies separated with comma
      */
     if ((specific_location || specific_location_hierarchy) && epsilon_value) {
       parse_hierarchy_polygons(epsilon_value, specific_location, specific_location_hierarchy.split(","));
+    } else if (polygon_category && epsilon_value) {
+      get_ueberort_by_category(epsilon_value, polygon_category)
     } else {
       jQuery("#location_category").val("");
       jQuery("#epsilon_factor").val("");
@@ -119,9 +123,35 @@ function init_polygons_simplification(category) {
 
       get_corresponding_polygons([hierarchies[next_hierarchy_index]], json_processed_polygons[hierarchies[next_hierarchy_index]])
 
+    },
+    error: function(xhr, ajaxOptions, thrownError) {
+      alert(xhr.status);
+      alert(thrownError);
     }
   })
 
+}
+
+function get_ueberort_by_category(epsilon, category) {
+  jQuery.ajax({
+    url: ajaxurl,
+    data: {
+      action: "get_ueberort_by_category",
+      category: category
+    },
+    success: function(result) {
+      hierarchies = JSON.parse(result)
+
+      next_hierarchy_index = 0
+
+      parse_hierarchy_polygons(epsilon, "", [hierarchies[next_hierarchy_index]])
+
+    },
+    error: function(xhr, ajaxOptions, thrownError) {
+      alert(xhr.status);
+      alert(thrownError);
+    }
+  })
 }
 
 /**
@@ -176,6 +206,10 @@ function get_corresponding_polygons(polygon_id, polygon_id_array) {
 
       rebuild_polygons_json(polygon_id)
 
+    },
+    error: function(xhr, ajaxOptions, thrownError) {
+      alert(xhr.status);
+      alert(thrownError);
     }
   })
 }
@@ -262,7 +296,17 @@ function send_to_db_json(geo_data_to_save) {
     },
 
     success: function(result) {
-      console.log("SAVED")
+      query_status = JSON.parse(result)
+
+      console.log(query_status)
+
+      if (!isNaN(query_status[0])) {
+        console.log("SAVED")
+      } else {
+        alert_msg = "Error while saving polygon data for polygon id: " + query_status[1] + "\n" + "Hierarchy polygon Index: " + next_hierarchy_index 
+        alert(alert_msg)
+      }
+
       if (hierarchies.length > 0) {
         next_hierarchy_index++
 
@@ -282,8 +326,14 @@ function send_to_db_json(geo_data_to_save) {
             polygons_arr = [hierarchies[next_hierarchy_index]]
           }
           get_corresponding_polygons([hierarchies[next_hierarchy_index]], polygons_arr)
+
+          display_data_current_progress(next_hierarchy_index, hierarchies)
         }
       }
+    },
+    error: function(xhr, ajaxOptions, thrownError) {
+      alert(xhr.status);
+      alert(thrownError);
     }
   });
 }
@@ -1038,10 +1088,14 @@ function request_and_display_gemeinden(polygon_category, epsilon_value, specific
       jQuery("#loading_div").remove()
 
 
+    },
+    error: function(xhr, ajaxOptions, thrownError) {
+      alert(xhr.status);
+      alert(thrownError);
     }
+
   });
 }
-
 
 /**
  * Displaying data on the map
@@ -1075,8 +1129,11 @@ function display_feature(feature_data, color, test_data_source) {
 
 /**
  * Functions for the individual polygon simplification. NOT USING THE JSON FILES.
+ * @param  {[type]} epsilon_val                 [description]
+ * @param  {[type]} specific_location           [description]
+ * @param  {[type]} specific_location_hierarchy [description]
+ * @return {[type]}                             [description]
  */
-
 function parse_hierarchy_polygons(epsilon_val, specific_location, specific_location_hierarchy) {
   console.log("GETTING POLYGONS FOR HIERARCHY ID: " + specific_location_hierarchy)
   jQuery.ajax({
@@ -1140,6 +1197,10 @@ function parse_hierarchy_polygons(epsilon_val, specific_location, specific_locat
       }
 
 
+    },
+    error: function(xhr, ajaxOptions, thrownError) {
+      alert(xhr.status);
+      alert(thrownError);
     }
   });
 }
@@ -1286,13 +1347,30 @@ function send_to_db(geo_data_to_save) {
     },
 
     success: function(result) {
-      console.log("SAVED")
+
+      query_status = JSON.parse(result)
+      console.log(query_status)
+
+
+      if(!isNaN(query_status[0])){
+        console.log("SAVED")
+      }else{
+        alert_msg = "Error while saving polygon data for polygon id: " + query_status[1] + "\n" + "Hierarchy polygon Index: " + next_hierarchy_index 
+        alert(alert_msg)
+      }
+
       if (hierarchies.length > 0) {
         next_hierarchy_index++
         if (hierarchies[next_hierarchy_index]) {
           parse_hierarchy_polygons(epsilon_value, "", [hierarchies[next_hierarchy_index]]);
         }
+
+        display_data_current_progress(next_hierarchy_index, hierarchies)
       }
+    },
+    error: function(xhr, ajaxOptions, thrownError) {
+      alert(xhr.status);
+      alert(thrownError);
     }
   });
 
@@ -1332,3 +1410,12 @@ function json_to_wkt_hierarchie_parsing(obj_type, json_data) {
 
   return polygon
 }
+
+function display_data_current_progress(index, hierarhies){
+  jQuery("#loading").empty()
+  loading_text = "Current progress: " + index + "/" + hierarhies.length 
+  loading_text_div = jQuery('<div></div>')
+  jQuery("#loading").append(loading_text_div)
+  loading_text_div.text(loading_text)
+}
+

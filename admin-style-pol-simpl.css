@@ -1,3 +1,7 @@
-#map{
+#map {
 	height: 500px;
+}
+
+#loading {
+	font-size: 18px;
 }
