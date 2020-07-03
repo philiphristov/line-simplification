@@ -282,7 +282,7 @@ function save_to_database(){
 		$epsilon  	   = $geo_data["epsilon"];
 
 		$latest_id = $id_data;
-		
+
 		if (check_polygon_exists($id_data, $epsilon)){
 			$sql = ("UPDATE `polygone_vereinfacht` SET 
 				`Id_Ort` = $id_data,
@@ -290,10 +290,8 @@ function save_to_database(){
 				`Epsilon` = $epsilon,
 				`Mittelpunkt`=  ST_Centroid(ST_GeomFromText('".$location_data."')) 
 				 WHERE polygone_vereinfacht.Id_Ort = $id_data LIMIT 1 " );
-				error_log(print_r("Updating Polygon Data $id_data", true));
 		}else{
-			$sql = ("INSERT INTO `polygone_vereinfacht` (`Id_Ort`, `Geodaten`, `Epsilon`, `Mittelpunkt`) values ($id_data, ST_GeomFromText('".$location_data."'), $epsilon, ST_Centroid(ST_GeomFromText('".$location_data."')))" );
-			error_log(print_r("Creating Polygon Data $id_data", true));
+			$sql = ("INSERT INTO `polygone_vereinfacht` (`Id_Ort`, `Geodaten`, `Epsilon`, `Mittelpunkt`) values ($id_data, ST_GeomFromText('".$location_data."'), $epsilon, ST_Centroid(ST_GeomFromText('".$location_data."'))) " );
 		}
 
 		
