@@ -62,6 +62,8 @@ jQuery(document).ready(function() {
 
     file_name = "neighbours_" + polygon_category + "_all.txt"
 
+    jQuery("#loading").prepend(jQuery("<h3>").text("Loading Data...").attr("id", "loading_div"))
+
     jQuery.getJSON(url.plugins_Url + file_name, function(json) {
       json_processed_polygons = json
       init_polygons_simplification(polygon_category)
@@ -82,6 +84,9 @@ jQuery(document).ready(function() {
 
     console.log(polygon_category)
     console.log(epsilon_value)
+
+    jQuery("#loading").prepend(jQuery("<h3>").text("Loading Data...").attr("id", "loading_div"))
+
     /**
      * simplify single polygon or polygons corresponding to a single hierarchy, or multiple hierarhies separated with comma
      */
@@ -121,6 +126,8 @@ function init_polygons_simplification(category) {
 
       next_hierarchy_index = 0
 
+      jQuery("#loading_div").remove()
+
       get_corresponding_polygons([hierarchies[next_hierarchy_index]], json_processed_polygons[hierarchies[next_hierarchy_index]])
 
     },
@@ -143,6 +150,10 @@ function get_ueberort_by_category(epsilon, category) {
       hierarchies = JSON.parse(result)
 
       next_hierarchy_index = 0
+
+      jQuery("#loading_div").remove()
+
+      display_data_current_progress(next_hierarchy_index, hierarchies)
 
       parse_hierarchy_polygons(epsilon, "", [hierarchies[next_hierarchy_index]])
 
@@ -1148,6 +1159,7 @@ function parse_hierarchy_polygons(epsilon_val, specific_location, specific_locat
       console.log("hierarchy polygons:");
       console.log(locations_info);
 
+      jQuery("#loading_div").remove()
 
       locations_info.map(function(location_data) {
         location_data['parsed_coords'] = parseGeoDataArray(location_data.coordinates)

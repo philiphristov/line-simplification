@@ -289,7 +289,7 @@ function save_to_database(){
 				`Geodaten` = ST_GeomFromText('".$location_data."'),
 				`Epsilon` = $epsilon,
 				`Mittelpunkt`=  ST_Centroid(ST_GeomFromText('".$location_data."')) 
-				 WHERE polygone_vereinfacht.Id_Ort = $id_data LIMIT 1 " );
+				 WHERE polygone_vereinfacht.Id_Ort = $id_data AND polygone_vereinfacht.Epsilon = $epsilon LIMIT 1 " );
 		}else{
 			$sql = ("INSERT INTO `polygone_vereinfacht` (`Id_Ort`, `Geodaten`, `Epsilon`, `Mittelpunkt`) values ($id_data, ST_GeomFromText('".$location_data."'), $epsilon, ST_Centroid(ST_GeomFromText('".$location_data."'))) " );
 		}
